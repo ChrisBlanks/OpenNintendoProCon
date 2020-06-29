@@ -1,6 +1,7 @@
 build
 build/
 build/*
+!build/*.def
 
 .vscode
 .vscode/
