@@ -55,18 +55,22 @@ int readControllerEvent(int joystick_fd, struct js_event* event_info){
 //Purpose: Loop over controller input & print to stdout
 int testControllerInputs(int joystick_fd,char* joystick_file_name){
 
-    int status = -1;
-    char* joystick= NULL;
+    int status = SUCCESSFUL_EXECUTION;
+    __u32 driver_vers = 0;
+
+    char* joystick    = NULL;
 
     struct js_event cur_event = {0};
     joysticks_t controler_js = {0};
     
-    fprintf(stdout,"\n------Starting Nintendo Pro Controller Testing------\n");
+    fprintf(stdout,"\n------Starting Nintendo Pro Controller Testing------\n");  
     fprintf(stdout,"Joystick Device @ %s\n",joystick_file_name);
 
     //process & print events
-    while( readControllerEvent(joystick_fd,&cur_event) == SUCCESSFUL_EXECUTION){ 
-        
+    while( status == SUCCESSFUL_EXECUTION ){ 
+        status = readControllerEvent(joystick_fd,&cur_event); 
+        if(status == DEVICE_READ_ERROR){ continue; }
+
         switch(cur_event.type){
             case JS_EVENT_BUTTON:
                 fprintf(stdout,"\nJoystick Event: %u %s\n",
