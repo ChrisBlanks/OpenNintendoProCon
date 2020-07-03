@@ -65,7 +65,7 @@ int testControllerInputs(int joystick_fd,char* joystick_file_name){
     fprintf(stdout,"Joystick Device @ %s\n",joystick_file_name);
 
     //process & print events
-    while(status = readControllerEvent(joystick_fd,&cur_event) == SUCCESSFUL_EXECUTION){ 
+    while( readControllerEvent(joystick_fd,&cur_event) == SUCCESSFUL_EXECUTION){ 
         
         switch(cur_event.type){
             case JS_EVENT_BUTTON:
