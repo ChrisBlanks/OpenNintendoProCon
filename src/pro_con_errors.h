@@ -25,4 +25,4 @@ Date: Summer 2020
 //function prototypes
 char* getErrorMessage(int status);
 
-#endif
+#endif // ifndef __PRO_CON_ERRORS__
