@@ -41,8 +41,8 @@ typedef struct direction_input_t {
 typedef struct controller_input_t {
     int event_type; //set to value listed in controller_event_type enum
 
-    button_input_t     button_event;
-    direction_input_t  js_keypad_event;
+    button_input_t*     button_event;
+    direction_input_t*  js_keypad_event;
     
 } controller_input_t;
 

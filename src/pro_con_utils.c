@@ -137,7 +137,6 @@ int readControllerEvent(int joystick_fd, struct js_event* event_info){
 int testControllerInputs(int joystick_fd,char* joystick_file_name){
 
     int status = SUCCESSFUL_EXECUTION;
-    __u32 driver_vers = 0;
 
     char* direction      = NULL,
         * direction_type = NULL;
