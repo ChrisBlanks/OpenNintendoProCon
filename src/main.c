@@ -14,6 +14,7 @@ Date: Summer 2020
 // source code headers
 #include "pro_con_errors.h"
 #include "pro_con_utils.h"
+#include "key_map.h"
 
 
 int main(int argc, char* argv[]){
@@ -43,7 +44,10 @@ int main(int argc, char* argv[]){
         return BAD_FILE_PATH_ERROR;    
     }
     
-    testControllerInputs(js_fd,js_dev_name);
+    //testControllerInputs(js_fd,js_dev_name);
+    
+    testAtoZPresses();
+
     close(js_fd);
 
     return SUCCESSFUL_EXECUTION; 
