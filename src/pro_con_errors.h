@@ -14,12 +14,13 @@ Date: Summer 2020
 #define NUM_OF_ERRORS 6 //includes successful execution as an error
 #define MAX_ERROR_MESSAGE_LEN 100
 
-#define SUCCESSFUL_EXECUTION    0 
-#define INPUT_ERROR            -1
-#define BAD_FILE_PATH_ERROR    -2
-#define EXECUTION_ERROR        -3
-#define JOYSTICK_AXES_ERROR    -4
-#define DEVICE_READ_ERROR      -5
+#define SUCCESSFUL_EXECUTION                0 
+#define INPUT_ERROR                        -1
+#define BAD_FILE_PATH_ERROR                -2
+#define EXECUTION_ERROR                    -3
+#define JOYSTICK_AXES_ERROR                -4
+#define DEVICE_READ_ERROR                  -5
+#define COULD_NOT_OPEN_DISPLAY_ERROR       -6
  
 
 //function prototypes
