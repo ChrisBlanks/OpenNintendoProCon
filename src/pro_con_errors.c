@@ -17,7 +17,7 @@ Date: Summer 2020
 
 void  displayErrorList(void){
     if(GLOBAL_ERRORS.isInitialized != ERROR_TABLE_INITIALIZED){
-        fprintf(stdout,"\nError File has not be loaded.\n");
+        fprintf(stdout,"\nError file has not be loaded.\n");
         return;
     }  
 
