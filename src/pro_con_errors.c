@@ -32,20 +32,25 @@ void  displayErrorList(void){
 
 void  loadErrorFile(char* error_file_path){
     int cur_index = 0;
-    char* error_message = NULL; 
-    char* pos;
 
-    FILE* err_file = NULL;    
-    err_file = fopen(error_file_path,"r");
+    char* error_message = NULL,
+        * newline_pos   = NULL,
+        * path          = NULL;
+
+    FILE* err_file = NULL;  
+
+    path = (error_file_path == NULL) ? ERROR_DEF_PATH : error_file_path;
+
+    err_file = fopen(path,"r");
 
     if(err_file == NULL){ 
-        fprintf(stdout,"\nError: Could not load error file \"%s\".\n",error_file_path);
+        fprintf(stdout,"\nError: Could not load error file \"%s\".\n",path);
         exit(1); 
     }
 
     error_message = (char*) malloc(MAX_ERROR_MESSAGE_LEN * sizeof(char));
 
-    while(fgets(error_message,MAX_ERROR_MESSAGE_LEN*sizeof(char),err_file) != NULL ){
+    while(fgets(error_message,MAX_ERROR_MESSAGE_LEN,err_file) != NULL ){
         if(strcmp(error_message,"\n")   == 0   || 
            strcmp(error_message,"\r\n") == 0   || 
            strcmp(error_message,"")     == 0   ||
@@ -53,8 +58,8 @@ void  loadErrorFile(char* error_file_path){
                continue;
         }
 
-        pos = strchr(error_message,'\n');
-        if(pos != NULL){ *pos = '\0'; } //remove newline
+        newline_pos = strchr(error_message,'\n');
+        if(newline_pos != NULL){ *newline_pos = '\0'; } //remove newline
 
         snprintf(GLOBAL_ERRORS.error_list[cur_index],MAX_ERROR_MESSAGE_LEN,error_message);
         cur_index++; 
