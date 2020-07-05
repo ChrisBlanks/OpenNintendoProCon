@@ -1,8 +1,11 @@
 build
 build/
 build/*
+
+#don't ignore defintion files
 !build/*.def
-*.def
+!build/key_map.def
+!*.def
 
 .vscode
 .vscode/

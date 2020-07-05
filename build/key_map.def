@@ -1,0 +1,15 @@
+--- Key Map Definitions ---
+B: 0, 97
+A: 1, 98
+Y: 2, 99
+X: 3, 100
+L: 4, 101
+R: 5, 102
+ZL: 5, 103
+ZR: 7, 104
+Minus: 8, 105
+Plus: 9, 106
+Left JS Press: 10, 107
+Right JS Press: 11, 108
+Home: 12, 109
+Screenshot: 13, 110

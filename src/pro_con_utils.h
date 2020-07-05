@@ -38,6 +38,15 @@ typedef struct direction_input_t {
 } direction_input_t;
 
 
+typedef struct controller_input_t {
+    int event_type; //set to value listed in controller_event_type enum
+
+    button_input_t*     button_event;
+    direction_input_t*  js_keypad_event;
+    
+} controller_input_t;
+
+
 // enum definitions 
 enum controller_event_type {
     KEY_BUTTON_TYPE   = JS_EVENT_BUTTON,
@@ -76,4 +85,4 @@ int getJoystickInfo(struct js_event* event_info,direction_input_t* joystick_data
 int readControllerEvent(int joystick_fd, struct js_event* event_info);
 int testControllerInputs(int joystick_fd,char* joystick_file_name);
 
-#endif
+#endif // ifndef __PRO_CON_UTILS__

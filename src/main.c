@@ -14,6 +14,7 @@ Date: Summer 2020
 // source code headers
 #include "pro_con_errors.h"
 #include "pro_con_utils.h"
+#include "x11_map.h"
 
 
 int main(int argc, char* argv[]){
@@ -43,7 +44,20 @@ int main(int argc, char* argv[]){
         return BAD_FILE_PATH_ERROR;    
     }
     
-    testControllerInputs(js_fd,js_dev_name);
+    //initialize error info
+    loadErrorFile(ERROR_DEF_PATH);
+    displayErrorList();
+
+    //load key map
+    loadKeyMap(KEY_MAP_PATH);
+    displayLoadedKeyMap();
+
+    updateKeyMap(NULL,5,103);
+
+    //run test code
+    //processAllEvents(js_fd,js_dev_name);
+    //testControllerInputs(js_fd,js_dev_name);
+
     close(js_fd);
 
     return SUCCESSFUL_EXECUTION; 
