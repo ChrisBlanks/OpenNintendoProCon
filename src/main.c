@@ -44,9 +44,14 @@ int main(int argc, char* argv[]){
         return BAD_FILE_PATH_ERROR;    
     }
     
+    //initialize error info
+    loadErrorFile(ERROR_DEF_PATH);
+    displayErrorList();
+
+    //run test code
+
     //testControllerInputs(js_fd,js_dev_name);
-    
-    testAtoZPresses();
+    //testAtoZPresses();
 
     close(js_fd);
 
