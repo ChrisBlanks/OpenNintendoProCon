@@ -21,4 +21,9 @@ so that a Linux desktop user is able to use a pro controller in a manner similar
     - [Sphinx Style Documentation](https://www.kernel.org/doc/html/latest/input/joydev/joystick.html)
 
 
+### Notes
+- The **jstest** tool can be used to view controller input events
+  - Example: `jstest --event /dev/input/js1`
+
+
 
