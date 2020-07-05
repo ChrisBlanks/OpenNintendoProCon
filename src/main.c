@@ -48,10 +48,12 @@ int main(int argc, char* argv[]){
     loadErrorFile(ERROR_DEF_PATH);
     displayErrorList();
 
-    //run test code
+    //load key map
+    loadKeyMap(KEY_MAP_PATH);
 
+    //run test code
+    processAllEvents(js_fd,js_dev_name);
     //testControllerInputs(js_fd,js_dev_name);
-    //testAtoZPresses();
 
     close(js_fd);
 
