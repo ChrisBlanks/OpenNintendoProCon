@@ -21,14 +21,39 @@ int convertControllerEventToKeyEvent(x11_display_objs_t* x11_interface,controlle
     int event_mods   = NO_MODS,
         button_state = 0,
         keysym_code  = 0;
-    
-    //if(keysym_code >= XK_A || keysym_code <= XK_Z){ event_mods = ShiftMask}
+
+    if(KEY_MAP_TABLE.isInitialized != KEY_MAP_TABLE_INITIALIZED){
+        fprintf(stdout,"\nKey map file has not be loaded.\n");
+        return INPUT_ERROR;
+    }  
+
     button_state = con_event->button_event->isPressed;
     keysym_code =  KEY_MAP_TABLE.key_map_table[con_event->button_event->button_code].keysym;
 
     sendKeyEventToX(x11_interface,key_event,keysym_code,button_state,event_mods);
     XFlush(x11_interface->disp);
 
+    return SUCCESSFUL_EXECUTION;
+}
+
+
+int displayLoadedKeyMap(void){
+    if(KEY_MAP_TABLE.isInitialized != KEY_MAP_TABLE_INITIALIZED){
+        fprintf(stdout,"\nKey map file has not be loaded.\n");
+        return INPUT_ERROR;
+    }  
+
+    fprintf(stdout,"\nKey Map List:\n\n");
+    for(int indx = 0; indx < KEY_MAP_TABLE.max_index; indx++){
+        fprintf(stdout,"Key Map #%d: %s: %d %d \n",
+        indx,
+        KEY_MAP_TABLE.key_map_table[indx].button_name,
+        KEY_MAP_TABLE.key_map_table[indx].controller_code,
+        KEY_MAP_TABLE.key_map_table[indx].keysym       
+        );
+    }  
+    fprintf(stdout,"\nDone.\n");
+    
     return SUCCESSFUL_EXECUTION;
 }
 
@@ -46,27 +71,6 @@ int freeXInterfaceObjs(x11_display_objs_t* x11_interface){
     return SUCCESSFUL_EXECUTION;
 }
 
-
-int modifyXKeyEvent(x11_display_objs_t* x11_interface,int isPressed,int keysym,int modifiers,XKeyEvent* event){
-    event->display = (x11_interface->disp);
-    event->window = *(x11_interface->focus_win);
-    event->root = *(x11_interface->root);
-    event->subwindow = None;
-
-    event->time = CurrentTime; 
-    
-    event->x = 1;
-    event->y = 1;
-    event->x_root = 1;
-    event->y_root = 1;
-
-    event->same_screen = 1;
-    event->keycode = XKeysymToKeycode((event->display),keysym); 
-    event->state = modifiers;
-    event->type = isPressed ? KeyPress : KeyRelease;
-
-    return SUCCESSFUL_EXECUTION;
-}
 
 int initXInterface(x11_display_objs_t* x11_interface){
     int revert;
@@ -95,6 +99,7 @@ int initXInterface(x11_display_objs_t* x11_interface){
     return SUCCESSFUL_EXECUTION;
 }
 
+
 int loadKeyMap(char* key_map_path){
     int key_map_num = 0,
         button_code = 0;
@@ -108,9 +113,8 @@ int loadKeyMap(char* key_map_path){
         * foundSubStr = NULL,
         * line_parts  = NULL;
         
-    char line_buf[MAX_LINE_SIZE]   = {0}, 
-         button_str[MAX_LINE_SIZE] = {0};
-    
+    char line_buf[MAX_LINE_SIZE]   = {0}; 
+
     path = (key_map_path == NULL) ? KEY_MAP_PATH: key_map_path;    
     key_map_file = fopen(path,"r");
 
@@ -123,7 +127,7 @@ int loadKeyMap(char* key_map_path){
     
     fprintf(stdout,"\nLoading Key Map...\n");
     while(fgets(line_buf,MAX_LINE_SIZE,key_map_file) != NULL){
-
+        char* button_str = (char*) malloc(MAX_LINE_SIZE*sizeof(char));
         if(foundSubStr = strstr(line_buf,"Key Map") ){ continue; } //ignore header
 
         line_parts = strtok(line_buf,KEY_MAP_LABEL_DELIM);
@@ -139,16 +143,39 @@ int loadKeyMap(char* key_map_path){
         KEY_MAP_TABLE.key_map_table[key_map_num].keysym = keysym;
         KEY_MAP_TABLE.key_map_table[key_map_num].button_name = button_str;
 
-        fprintf(stdout,"Key Map -> %s: %d %d \n",button_str,button_code,keysym);
         key_map_num++;
     }
 
     KEY_MAP_TABLE.max_index = key_map_num;
+    KEY_MAP_TABLE.isInitialized = KEY_MAP_TABLE_INITIALIZED;
 
     fclose(key_map_file); 
 
     return SUCCESSFUL_EXECUTION;
 }
+
+
+int modifyXKeyEvent(x11_display_objs_t* x11_interface,int isPressed,int keysym,int modifiers,XKeyEvent* event){
+    event->display = (x11_interface->disp);
+    event->window = *(x11_interface->focus_win);
+    event->root = *(x11_interface->root);
+    event->subwindow = None;
+
+    event->time = CurrentTime; 
+    
+    event->x = 1;
+    event->y = 1;
+    event->x_root = 1;
+    event->y_root = 1;
+
+    event->same_screen = 1;
+    event->keycode = XKeysymToKeycode((event->display),keysym); 
+    event->state = modifiers;
+    event->type = isPressed ? KeyPress : KeyRelease;
+
+    return SUCCESSFUL_EXECUTION;
+}
+
 
 int processAllEvents(int joystick_fd,char* joystick_file_name){
 
@@ -251,6 +278,67 @@ int testSendingKeyPresses(int key_code){
 }
 
 
-int updateKeyMap(char* key_map_path){
+int updateKeyMap(char* key_map_path,int button_code,unsigned long keysym_code){
+    int key_map_num = 0,
+        current_button_code = 0;
 
+    unsigned long current_keysym_code = 0;
+
+    char* path = NULL;    
+    char updated_line[MAX_LINE_SIZE]   = {0};
+    
+    FILE* key_map_file = NULL;
+
+    if(KEY_MAP_TABLE.isInitialized != KEY_MAP_TABLE_INITIALIZED){
+        fprintf(stdout,"\nKey map file has not be loaded.\n");
+        return INPUT_ERROR;
+    }  
+
+    if(KEY_MAP_TABLE.max_index < button_code){
+        fprintf(stdout,"\nKey map file has not be loaded.\n");
+        return INPUT_ERROR;
+    }  
+
+    path = (key_map_path == NULL) ? KEY_MAP_PATH: key_map_path;    
+    key_map_file = fopen(path,"w");
+
+    if(key_map_file == NULL){ 
+        fprintf(stdout,"\nError: Could not load key map file \"%s\".\n",path);
+        return INPUT_ERROR; 
+    }
+
+    //write header
+    fputs(KEY_MAP_HEADER,key_map_file);
+
+    for(int indx = 0; indx < KEY_MAP_TABLE.max_index; indx++){
+        
+        if(indx == button_code + HEADER_LINE_OFFSET){
+            current_button_code = button_code;
+            current_keysym_code = keysym_code;
+
+        } else{
+            current_button_code = KEY_MAP_TABLE.key_map_table[indx].controller_code ;
+            current_keysym_code = KEY_MAP_TABLE.key_map_table[indx].keysym;
+        }
+
+        sprintf(updated_line,"%s: %d, %d\n",
+                KEY_MAP_TABLE.key_map_table[indx].button_name,
+                current_button_code,
+                current_keysym_code
+        );
+        fputs(updated_line,key_map_file);
+
+    }      
+
+    fclose(key_map_file);
+
+    //clear out data structure before reloading
+    free(KEY_MAP_TABLE.key_map_table);
+    KEY_MAP_TABLE.isInitialized = 0;
+    KEY_MAP_TABLE.max_index = 0;
+
+    //reload key map file
+    loadKeyMap(key_map_path);
+
+    return SUCCESSFUL_EXECUTION;
 }

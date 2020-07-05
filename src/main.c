@@ -50,9 +50,12 @@ int main(int argc, char* argv[]){
 
     //load key map
     loadKeyMap(KEY_MAP_PATH);
+    displayLoadedKeyMap();
+
+    updateKeyMap(NULL,5,103);
 
     //run test code
-    processAllEvents(js_fd,js_dev_name);
+    //processAllEvents(js_fd,js_dev_name);
     //testControllerInputs(js_fd,js_dev_name);
 
     close(js_fd);

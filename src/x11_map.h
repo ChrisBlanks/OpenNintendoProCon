@@ -27,6 +27,9 @@ Date: Summer 2020
 #define MAX_LINE_SIZE 50
 #define KEY_MAP_LABEL_DELIM ":"
 #define KEY_MAP_VALUE_DELIM ","
+#define KEY_MAP_TABLE_INITIALIZED 1
+#define HEADER_LINE_OFFSET 1
+#define KEY_MAP_HEADER "--- Key Map Definitions ---\n"
 
 
 //data structure definitions
@@ -38,6 +41,7 @@ typedef struct controller_key_map_t {
 } controller_key_map_t;
 
 typedef struct key_map_table_t {
+    int isInitialized;
     int max_index;
 
     controller_key_map_t* key_map_table;
@@ -70,6 +74,6 @@ int processAllEvents(int joystick_fd,char* joystick_file_name);
 int sendKeyEventToX(x11_display_objs_t* display_objs,XKeyEvent* key_event,int key_code, int isPressed,int modifiers);
 int testAtoZPresses(void);
 int testSendingKeyPresses(int key_code);
-int updateKeyMap(char* key_map_path);
+int updateKeyMap(char* key_map_path,int button_code,unsigned long keysym_code);
 
 #endif // ifndef __KEY_MAP__
