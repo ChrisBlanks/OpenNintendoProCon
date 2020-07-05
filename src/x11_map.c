@@ -11,8 +11,9 @@ Date: Summer 2020
 #include <unistd.h>
 
 //source code headers
-#include "key_map.h"
+#include "x11_map.h"
 #include "pro_con_errors.h"
+
 
 int convertControllerEventToKeyEvent(x11_display_objs_t* x11_interface,controller_input_t* con_event,XKeyEvent* key_event){
     int event_mods   = NO_MODS,

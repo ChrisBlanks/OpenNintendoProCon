@@ -14,7 +14,7 @@ Date: Summer 2020
 // source code headers
 #include "pro_con_errors.h"
 #include "pro_con_utils.h"
-#include "key_map.h"
+#include "x11_map.h"
 
 
 int main(int argc, char* argv[]){
