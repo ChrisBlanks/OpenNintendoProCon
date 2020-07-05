@@ -18,15 +18,14 @@ Date: Summer 2020
 int convertControllerEventToKeyEvent(x11_display_objs_t* x11_interface,controller_input_t* con_event,XKeyEvent* key_event){
     int event_mods   = NO_MODS,
         button_state = 0,
-        keycode      = 0;
+        key_code     = 0;
 
     button_state = con_event->button_event->isPressed;
     
     //To-Do: Assign keycode based on mapping from key map file
     // keycode= some_val; 
 
-    modifyXKeyEvent(x11_interface,button_state,keycode,event_mods,key_event);
-    sendKeypressToX(key_event);
+    sendKeyEventToX(x11_interface,key_event,key_code,button_state,event_mods);
 
     return SUCCESSFUL_EXECUTION;
 }
@@ -58,7 +57,7 @@ int modifyXKeyEvent(x11_display_objs_t* x11_interface,int isPressed,int keycode,
     event->y_root = 1;
 
     event->same_screen = 1;
-    event->keycode = XKeysymToKeycode((event->display),keycode);
+    event->keycode = XKeysymToKeycode((event->display),keycode); 
     event->state = modifiers;
     event->type = isPressed ? KeyPress : KeyRelease;
 
@@ -102,13 +101,20 @@ int processAllEvents(void){
     return SUCCESSFUL_EXECUTION;
 }
 
-int sendKeypressToX(XKeyEvent* key_press){
-    XSendEvent(key_press->display,key_press->window,PROPAGATE_EN,KeyPressMask,(XEvent*)key_press);
+int sendKeyEventToX(x11_display_objs_t* display_objs,XKeyEvent* key_event,int key_code, int isPressed,int modifiers){
+    char* action = isPressed ? "Pressing" : "Releasing";
+
+    fprintf(stdout,"\nPressing key (%s)\n",XKeysymToString(key_code));
+    modifyXKeyEvent(display_objs, isPressed,key_code,modifiers,key_event);
+    XSendEvent(key_event->display,key_event->window,PROPAGATE_EN,KeyPressMask,(XEvent*)key_event);
+
+    return SUCCESSFUL_EXECUTION; 
 }
 
 
 int testAtoZPresses(void){
-    for(int key= XK_A; key <= XK_Z; key++){
+
+    for(int key= XK_a; key <= XK_z; key++){
         testSendingKeyPresses(key);
     }
 
@@ -118,28 +124,17 @@ int testAtoZPresses(void){
 
 int testSendingKeyPresses(int key_code){
     int test_button_state = 1,
-        mods              = NO_MODS;
+        mods              = ShiftMask; //mask makes letters uppercase
 
     x11_display_objs_t display_objs = {0};
     XKeyEvent test_event = {0};
 
     initXInterface(&display_objs);
     
-    //press test key
-    fprintf(stdout,"\nPressing key (%s)\n",XKeysymToString(key_code));
-    modifyXKeyEvent(&display_objs, test_button_state,key_code,mods,&test_event);
-    sendKeypressToX(&test_event);
-
     sleep(KEY_TEST_DELAY);
 
-    fprintf(stdout,"Success!\n");
-
-    //release test key
-    fprintf(stdout,"\nReleasing key (%s)\n",XKeysymToString(key_code));
-    modifyXKeyEvent(&display_objs, !test_button_state, key_code, mods, &test_event);
-    sendKeypressToX(&test_event); 
-
-    fprintf(stdout,"Success!\n");   
+    sendKeyEventToX(&display_objs,&test_event,key_code,test_button_state,mods);
+    sendKeyEventToX(&display_objs,&test_event,key_code,!test_button_state,mods);
 
     freeXInterfaceObjs(&display_objs);
 

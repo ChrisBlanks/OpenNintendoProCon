@@ -46,7 +46,7 @@ int modifyXKeyEvent(x11_display_objs_t* x11_interface,int isPressed,int keycode,
 int initXInterface(x11_display_objs_t* x11_interface);
 int loadKeyMap(char* key_map_path);
 int processAllEvents(void);
-int sendKeypressToX(XKeyEvent* key_press);
+int sendKeyEventToX(x11_display_objs_t* display_objs,XKeyEvent* key_event,int key_code, int isPressed,int modifiers);
 int testAtoZPresses(void);
 int testSendingKeyPresses(int key_code);
 
