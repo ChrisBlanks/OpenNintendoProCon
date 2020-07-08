@@ -18,6 +18,8 @@ Date: Summer 2020
 #include "pro_con_utils.h"
 
 //define macros
+#define POINTER_MOVE_SCALAR 200
+
 #define NO_MODS 0
 #define PROPAGATE_EN 1
 #define KEY_TEST_DELAY 1 // seconds
@@ -65,6 +67,7 @@ extern key_map_table_t KEY_MAP_TABLE;
 
 
 int convertControllerEventToKeyEvent(x11_display_objs_t* x11_interface, controller_input_t* con_event,XKeyEvent* key_event);
+int convertControllerEventToMouseMove(x11_display_objs_t* x11_interface,direction_input_t* direction_input);
 int displayLoadedKeyMap(void);
 int freeXInterfaceObjs(x11_display_objs_t* x11_interface);
 int modifyXKeyEvent(x11_display_objs_t* x11_interface,int isPressed,int keysym,int modifiers,XKeyEvent* event);

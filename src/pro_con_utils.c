@@ -138,6 +138,9 @@ int testControllerInputs(int joystick_fd,char* joystick_file_name){
 
     int status = SUCCESSFUL_EXECUTION;
 
+    int x_pos = 0,
+        y_pos = 0;
+
     char* direction      = NULL,
         * direction_type = NULL;
 
@@ -163,6 +166,14 @@ int testControllerInputs(int joystick_fd,char* joystick_file_name){
                 break;
             case JOYSTICK_TYPE:
                 getJoystickInfo(&cur_event,&controler_js);
+
+                if(controler_js.changed_axis % 2 == 0){
+                    x_pos = controler_js.changed_axis;
+                    y_pos = controler_js.other_axis;
+                } else{
+                    x_pos = controler_js.other_axis;
+                    y_pos = controler_js.changed_axis;                   
+                }
 
                 fprintf(stdout,"\nJoystick Event: %s %s @ position (%d, %d)\n",
                         controler_js.direction,

@@ -17,6 +17,7 @@ Date: Summer 2020
 #define JOYSTICK_DEV 1
 
 #define NUM_OF_AXES 6
+#define MAX_AXIS_VALUE 32767
 
 
 //data structure definitions 

@@ -37,6 +37,28 @@ int convertControllerEventToKeyEvent(x11_display_objs_t* x11_interface,controlle
 }
 
 
+int convertControllerEventToMouseMove(x11_display_objs_t* x11_interface,direction_input_t* direction_input){
+    int x_destination = 0,
+        y_destination = 0;
+
+    int direction = direction_input->changed_axis;
+
+    fprintf(stdout,"\nCalculating pos\n");
+    if( direction == LEFT_JOY_HORIZ_AXIS || direction == RIGHT_JOY_HORIZ_AXIS || direction == DIR_PAD_HORIZ){
+        x_destination = (int)( POINTER_MOVE_SCALAR * (direction_input->joysticks_pos[direction] / MAX_AXIS_VALUE));
+    } else{
+        y_destination = (int)( POINTER_MOVE_SCALAR * (direction_input->joysticks_pos[direction]  / MAX_AXIS_VALUE));
+    }
+    
+    fprintf(stdout,"\nMoving to pos\n");
+
+    XWarpPointer(x11_interface->disp,*(x11_interface->root),None,0,0,0,0,x_destination,y_destination);
+    XFlush(x11_interface->disp);
+
+    return SUCCESSFUL_EXECUTION;
+}
+
+
 int displayLoadedKeyMap(void){
     if(KEY_MAP_TABLE.isInitialized != KEY_MAP_TABLE_INITIALIZED){
         fprintf(stdout,"\nKey map file has not be loaded.\n");
@@ -180,6 +202,8 @@ int modifyXKeyEvent(x11_display_objs_t* x11_interface,int isPressed,int keysym,i
 int processAllEvents(int joystick_fd,char* joystick_file_name){
 
     int status = SUCCESSFUL_EXECUTION;
+    int x_pos = 0,
+        y_pos = 0;
 
     char* direction      = NULL,
         * direction_type = NULL;
@@ -216,13 +240,25 @@ int processAllEvents(int joystick_fd,char* joystick_file_name){
             
             case JOYSTICK_TYPE:
                 controller.event_type = JOYSTICK_TYPE;
+                initXInterface(&x11_interface); //updates window to what's currently focused on
                 getJoystickInfo(&cur_event,controller.js_keypad_event);
+
+                convertControllerEventToMouseMove(&x11_interface,controller.js_keypad_event);
+                freeXInterfaceObjs(&x11_interface);
                 
+                if(controller.js_keypad_event->changed_axis % 2 == 0){
+                    x_pos = controller.js_keypad_event->changed_axis;
+                    y_pos = controller.js_keypad_event->other_axis;
+                } else{
+                    x_pos = controller.js_keypad_event->other_axis;
+                    y_pos = controller.js_keypad_event->changed_axis;                    
+                }
+
                 fprintf(stdout,"\nJoystick Event: %s %s @ position (%d, %d)\n",
                         controller.js_keypad_event->direction,
                         controller.js_keypad_event->direction_type,
-                        controller.js_keypad_event->joysticks_pos[controller.js_keypad_event->changed_axis],
-                        controller.js_keypad_event->joysticks_pos[controller.js_keypad_event->other_axis]
+                        controller.js_keypad_event->joysticks_pos[x_pos],
+                        controller.js_keypad_event->joysticks_pos[y_pos]
                        ); //add CLI for file logging enable
                 break;
 
