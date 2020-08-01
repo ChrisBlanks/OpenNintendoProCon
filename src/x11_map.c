@@ -83,21 +83,25 @@ int convertControllerEventToMouseMove(x11_display_objs_t* x11_interface,directio
     int x_destination = 0,
         y_destination = 0;
 
-    int direction = direction_input->changed_axis;
+    int direction = direction_input->changed_axis,
+        pos_val    = 0,
+        isHoriz    = 0;
 
-    fprintf(stdout,"\nCalculating pos\n");
-    if( direction == LEFT_JOY_HORIZ_AXIS || direction == RIGHT_JOY_HORIZ_AXIS || direction == DIR_PAD_HORIZ){
-        x_destination = (int)( POINTER_MOVE_SCALAR * (direction_input->joysticks_pos[direction] / MAX_AXIS_VALUE));
-
+    isHoriz = (direction % 2 == 0) ? 1 : 0;
+    pos_val = direction_input->joysticks_pos[direction];
+    
+    fprintf(stdout,"\nPos: %d",pos_val);   
+    
+    if(isHoriz){
+        XWarpPointer(x11_interface->disp,None,None,0,0,0,0,POINTER_MOVE_SCALAR*pos_val/MAX_AXIS_VALUE,0);
+        fprintf(stdout,"\nDelta X: %d\n",POINTER_MOVE_SCALAR*pos_val/MAX_AXIS_VALUE);
     } else{
-        y_destination = (int)( POINTER_MOVE_SCALAR * (direction_input->joysticks_pos[direction]  / MAX_AXIS_VALUE));
+        XWarpPointer(x11_interface->disp,None,None,0,0,0,0,0,POINTER_MOVE_SCALAR*pos_val/MAX_AXIS_VALUE);
+        fprintf(stdout,"\nDelta Y: %d\n",POINTER_MOVE_SCALAR*pos_val/MAX_AXIS_VALUE);       
     }
     
-    fprintf(stdout,"\nMoving to pos\n");
-
-    XWarpPointer(x11_interface->disp,None,None,0,0,0,0,x_destination,y_destination);
     XFlush(x11_interface->disp);
-    usleep(JOYSTICK_UPDATE_DELAY);
+    //usleep(JOYSTICK_UPDATE_DELAY);
 
     return SUCCESSFUL_EXECUTION;
 }
