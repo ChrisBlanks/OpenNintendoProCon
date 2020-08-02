@@ -19,6 +19,7 @@ Date: Summer 2020
 
 //define macros
 #define POINTER_MOVE_SCALAR 25
+#define KEYPAD_ADJUST_SCALAR 5
 #define CLICK_SLEEP_uS 20000   //20 milliseconds
 #define JOYSTICK_UPDATE_DELAY 20000 //20 milliseconds
 

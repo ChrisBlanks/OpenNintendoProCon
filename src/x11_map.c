@@ -11,13 +11,14 @@ Date: Summer 2020
 #include <string.h>
 #include <unistd.h>
 
+#include <X11/extensions/XTest.h>
+
 #define __X11_MAP_MAIN__
 //source code headers
 #include "x11_map.h"
 #include "pro_con_errors.h"
 
 
-// To-Do: Investigate why clicking only works on title bar of window
 int clickMouseAtCurrentPos(x11_display_objs_t* x11_interface,int isPressed){
     XEvent click_event = {0};
 
@@ -53,11 +54,12 @@ int clickMouseAtCurrentPos(x11_display_objs_t* x11_interface,int isPressed){
 }
 
 
-//To-do: Figure out why keys can't be entered in firefox
 int convertControllerEventToKeyEvent(x11_display_objs_t* x11_interface,controller_input_t* con_event,XKeyEvent* key_event){
     int event_mods   = NO_MODS,
         button_state = 0,
         keysym_code  = 0;
+
+    unsigned int no_delay = 0;
 
     if(KEY_MAP_TABLE.isInitialized != KEY_MAP_TABLE_INITIALIZED){
         fprintf(stdout,"\nKey map file has not be loaded.\n");
@@ -67,13 +69,13 @@ int convertControllerEventToKeyEvent(x11_display_objs_t* x11_interface,controlle
     button_state = con_event->button_event->isPressed;
     keysym_code =  KEY_MAP_TABLE.key_map_table[con_event->button_event->button_code].keysym;
 
-    if(keysym_code == XK_Pointer_Button1){
-        clickMouseAtCurrentPos(x11_interface,button_state);
-    }else{
-        sendKeyEventToX(x11_interface,key_event,keysym_code,button_state,event_mods);
+    if(keysym_code == XK_Pointer_Button1){ //left click
+        XTestFakeButtonEvent(x11_interface->disp, 1, button_state, no_delay);
+    } else if (keysym_code == XK_Pointer_Button3){ //right click
+        XTestFakeButtonEvent(x11_interface->disp, 3, button_state, no_delay);
+    } else{
+        XTestFakeKeyEvent(x11_interface->disp, XKeysymToKeycode(x11_interface->disp,keysym_code),button_state,no_delay);
     }
-    
-
 
     return SUCCESSFUL_EXECUTION;
 }
@@ -84,24 +86,25 @@ int convertControllerEventToMouseMove(x11_display_objs_t* x11_interface,directio
         y_destination = 0;
 
     int direction = direction_input->changed_axis,
-        pos_val    = 0,
-        isHoriz    = 0;
+        pos_val       = 0,
+        isHoriz       = 0,
+        move_scalar = 0;
 
     isHoriz = (direction % 2 == 0) ? 1 : 0;
     pos_val = direction_input->joysticks_pos[direction];
+    move_scalar = (direction_input->changed_axis >= DIR_PAD_HORIZ ) ? KEYPAD_ADJUST_SCALAR : POINTER_MOVE_SCALAR;
     
-    fprintf(stdout,"\nPos: %d",pos_val);   
+    fprintf(stdout,"\nPos: %d, Scalar: %d",pos_val,move_scalar);   
     
     if(isHoriz){
         XWarpPointer(x11_interface->disp,None,None,0,0,0,0,POINTER_MOVE_SCALAR*pos_val/MAX_AXIS_VALUE,0);
-        fprintf(stdout,"\nDelta X: %d\n",POINTER_MOVE_SCALAR*pos_val/MAX_AXIS_VALUE);
+        fprintf(stdout,"\nDelta X: %d\n",move_scalar*pos_val/MAX_AXIS_VALUE);
     } else{
         XWarpPointer(x11_interface->disp,None,None,0,0,0,0,0,POINTER_MOVE_SCALAR*pos_val/MAX_AXIS_VALUE);
-        fprintf(stdout,"\nDelta Y: %d\n",POINTER_MOVE_SCALAR*pos_val/MAX_AXIS_VALUE);       
+        fprintf(stdout,"\nDelta Y: %d\n",move_scalar*pos_val/MAX_AXIS_VALUE);       
     }
-    
+
     XFlush(x11_interface->disp);
-    //usleep(JOYSTICK_UPDATE_DELAY);
 
     return SUCCESSFUL_EXECUTION;
 }
@@ -232,7 +235,6 @@ int modifyXKeyEvent(x11_display_objs_t* x11_interface,int isPressed,int keysym,i
     event->subwindow = None;
 
     event->time = CurrentTime; 
-    
     event->x = 1;
     event->y = 1;
     event->x_root = 1;
