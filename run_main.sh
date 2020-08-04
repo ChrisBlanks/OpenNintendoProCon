@@ -1,2 +1,2 @@
 cd build 
-./main /dev/input/js1
+./main /dev/input/js1 "$@"
