@@ -6,6 +6,9 @@ Date: Summer 2020
 
 */
 
+
+#include <unistd.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,8 +41,21 @@ void configureSettings(int settings_type, char* settings_name, char* settings_va
     }
 }
 
-void connectToController(char* controller_path){
+int connectToController(char* controller_path,int* js_fd){
 
+    *js_fd = open(controller_path,O_RDONLY);
+
+    if(*js_fd < 0){
+        fprintf(stderr,"\nError(%d): %s -> %s.\n",
+                BAD_FILE_PATH_ERROR,
+                getErrorMessage(BAD_FILE_PATH_ERROR),
+                controller_path
+               );
+
+        return BAD_FILE_PATH_ERROR;    
+    }
+
+    return SUCCESSFUL_EXECUTION;
 }
 
 void displayPossibleErrors(void){
@@ -68,6 +84,60 @@ void displaySettings(int settings_type){
 }
 
 
+int executeCommand(cli_args_t* args){
+    int result       = 0,
+        js_fd        = 0,
+        processLater = 0; //boolean to control whether to start processing joystick events
+
+    char* device_path = (args->all_args)->value;
+
+    result = connectToController(device_path,&js_fd); //pass 1st arg value to read from specified device
+    if(result < SUCCESSFUL_EXECUTION){
+        fprintf(stderr,"\nError(%d): %s -> %s.\n", result, getErrorMessage(result), device_path);
+        return result;
+    }
+   
+    //loop through all args, besides device path
+    for(int arg_indx = 1; arg_indx < args->count;arg_indx++ ){
+        if(arg_indx == 1){ printf("\nStarting command execution\n"); } 
+        
+        if( strcmp( (args->all_args+arg_indx)->option,EMPTY_OPTION) == COMMAND_MATCH ){
+            
+            if( strcmp( (args->all_args+arg_indx)->value,START_PROCESSING) == COMMAND_MATCH ){
+                processLater = 1;
+            } else{ 
+                continue; //To-Do: Execute other non-option commands here
+            }
+            
+        } else if ( strcmp( (args->all_args+arg_indx)->option,DISPLAY_OPTION) == COMMAND_MATCH){
+            
+            if( strcmp( (args->all_args+arg_indx)->value,DISPLAY_ALL) == COMMAND_MATCH){
+                displayAll();    
+            } else if ( strcmp( (args->all_args+arg_indx)->value,DISPLAY_ERRORS) == COMMAND_MATCH){
+                displayErrorList();
+            } else {
+                fprintf(stderr,"\nNot a supported command: \"-%s %s\"\n",
+                        (args->all_args+arg_indx)->option,
+                        (args->all_args+arg_indx)->value
+                        );    
+            }
+            
+        } else if ( strcmp( (args->all_args+arg_indx)->option,CONFIGURE_SETTINGS) ){
+            //To-Do: Implement a way to configure settings. *idea: -c settings_name,settings_value
+        } else{
+            fprintf(stderr,"\nNot a supported command: \"-%s %s\"\n",
+                    (args->all_args+arg_indx)->option,
+                    (args->all_args+arg_indx)->value
+                    );   
+        }
+    }
+
+    if(processLater){ startProConProcessing(js_fd,device_path); }
+    
+    return SUCCESSFUL_EXECUTION;
+}
+
+
 void freeArgsData(cli_args_t* args){
     free(args->all_args);
     args->all_args = NULL;
@@ -81,8 +151,6 @@ void freeArgsData(cli_args_t* args){
 void initRoutine(void){
     loadErrorFile(NULL);
     loadKeyMap(NULL);
-
-    displayAll();
 }
 
 
@@ -98,13 +166,13 @@ void parseCLIArgs(int argc, char* argv[],cli_args_t* args){
 
     args->count = argc-1; //ignore 1st CLI arg (file name)
 
-    for(int arg_indx=1,arg_num =1; arg_num <= args->count;arg_indx++,arg_num++){
+    for(int arg_indx=0,arg_num =1; arg_num <= args->count;arg_indx++,arg_num++){
         current_arg = argv[arg_num];
-        char_pos = strchr(current_arg,'-');
+        char_pos = strrchr(current_arg,'-'); 
 
         fprintf(stdout,"\nArg #%d: %s",arg_num, current_arg);
 
-        if(char_pos != NULL && strlen(current_arg) == 2){ // check for one letter options
+        if(char_pos != NULL && strlen(current_arg) >= 2){ //process single letter & multi-letter options
             snprintf((args->all_args+arg_indx)->option,DEFAULT_CLI_STR_SZ,"%s",char_pos+1);
             
             if(arg_num + 1 <= args->count){

@@ -13,6 +13,16 @@ Date: Summer 2020
 #define DEFAULT_CLI_ARGS_SZ 20
 #define DEFAULT_CLI_STR_SZ 30
 
+/// command defines
+#define COMMAND_MATCH    0
+#define EMPTY_OPTION     "None"
+#define START_PROCESSING "start"
+
+#define DISPLAY_OPTION    "d"
+#define DISPLAY_ALL       "all"
+#define DISPLAY_ERRORS     "errors"
+
+#define CONFIGURE_SETTINGS "c"
 
 // enum definitions 
 enum pro_con_settings_type {
@@ -41,10 +51,11 @@ typedef struct cli_args_t {
 //function prototypes
 
 void configureSettings(int settings_type, char* settings_name, char* settings_value);
-void connectToController(char* controller_path);
+int  connectToController(char* controller_path,int* js_fd);
 void displayAll(void);
 void displayPossibleErrors(void);
 void displaySettings(int settings_type);
+int executeCommand(cli_args_t* args);
 void freeArgsData(cli_args_t* args);
 void initRoutine(void);
 void parseCLIArgs(int argc, char* argv[],cli_args_t* args);
