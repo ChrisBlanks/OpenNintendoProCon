@@ -11,6 +11,7 @@ Date: Summer 2020
 
 //defines
 #define DEFAULT_CLI_ARGS_SZ 20
+#define DEFAULT_CLI_STR_SZ 30
 
 
 // enum definitions 
@@ -27,8 +28,8 @@ enum testing_modes {
 //struct definitions
 
 typedef struct arg_t {
-    char* value;
-    char* option; 
+    char value[DEFAULT_CLI_STR_SZ];
+    char option[DEFAULT_CLI_STR_SZ]; 
 } arg_t;
 
 typedef struct cli_args_t {
