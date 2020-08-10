@@ -8,6 +8,7 @@ Date: Summer 2020
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 //source code headers
 #include "cmd_utils.h"
@@ -18,7 +19,7 @@ Date: Summer 2020
 
 void configureSettings(int settings_type, char* settings_name, char* settings_value){
     int setting = 0;
-    int setting_value = 0;
+    int value = 0;
 
     switch(settings_type){
         case CONFIGURATION_SETTINGS:
@@ -26,10 +27,11 @@ void configureSettings(int settings_type, char* settings_name, char* settings_va
             break;
 
         case CONTROLLER_MAP_SETTINGS:
-            setting = 0;
-            setting_value = 0;
+            
+            setting = strtol(settings_name,NULL,10); // settings name should represent the button code 
+            value = strtol(settings_value,NULL,10); //setting value should represent the desired keysym
 
-            updateKeyMap(NULL, setting, (unsigned long) setting_value);
+            updateKeyMap(NULL, setting, (unsigned long) value);
             break;
         default:
             fprintf(stderr,"\nNot a valid settings type (%d)\n",settings_type);
@@ -81,12 +83,13 @@ void initRoutine(void){
     loadKeyMap(NULL);
 
     displayAll();
-
 }
 
 
 void parseCLIArgs(int argc, char* argv[],cli_args_t* args){
-    char* current_arg = NULL;
+    char* current_arg = NULL,
+        * next_arg    = NULL,
+        * char_pos    = NULL;
 
     if(args == NULL){ //initialize if empty
         args = (cli_args_t*) malloc(sizeof(cli_args_t));
@@ -95,14 +98,28 @@ void parseCLIArgs(int argc, char* argv[],cli_args_t* args){
 
     args->count = argc-1; //ignore 1st CLI arg (file name)
 
-    for(int arg_indx=1; arg_indx <= args->count;arg_indx++){
-        current_arg = argv[arg_indx];
+    for(int arg_indx=1,arg_num =1; arg_num <= args->count;arg_indx++,arg_num++){
+        current_arg = argv[arg_num];
+        char_pos = strchr(current_arg,'-');
 
-        fprintf(stdout,"\nArg #%d: %s",arg_indx, current_arg);
+        fprintf(stdout,"\nArg #%d: %s",arg_num, current_arg);
 
-        //assign after processing
-        (args->all_args+arg_indx)->value =  "";
-        (args->all_args+arg_indx)->option = "";
+        if(char_pos != NULL && strlen(current_arg) == 2){ // check for one letter options
+            snprintf((args->all_args+arg_indx)->option,DEFAULT_CLI_STR_SZ,"%s",char_pos+1);
+            
+            if(arg_num + 1 <= args->count){
+                next_arg = argv[arg_num + 1];
+                snprintf((args->all_args+arg_indx)->value,DEFAULT_CLI_STR_SZ,"%s",next_arg);
+                arg_num++; //advance index since next arg is processed here
+                fprintf(stdout,"\nArg #%d: %s",arg_num, next_arg);
+            }
+
+        } else{
+            snprintf((args->all_args+arg_indx)->option,DEFAULT_CLI_STR_SZ,"None");
+            snprintf((args->all_args+arg_indx)->value,DEFAULT_CLI_STR_SZ,"%s",current_arg);        
+        }
+
+        fprintf(stdout,"\nOption: %s\nValue: %s\n",(args->all_args+arg_indx)->option,(args->all_args+arg_indx)->value);
     }
     fprintf(stdout,"\n");
     
