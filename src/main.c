@@ -36,9 +36,8 @@ int main(int argc, char* argv[]){
         return BAD_FILE_PATH_ERROR;    
     }
     
-
-    initRoutine();
     parseCLIArgs(argc,argv,args);
+    initRoutine();
     startProConProcessing(js_fd,js_dev_name);
 
     freeArgsData(args);
