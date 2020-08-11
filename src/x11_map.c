@@ -377,12 +377,12 @@ int updateKeyMap(char* key_map_path,int button_code,unsigned long keysym_code){
     FILE* key_map_file = NULL;
 
     if(KEY_MAP_TABLE.isInitialized != KEY_MAP_TABLE_INITIALIZED){
-        fprintf(stdout,"\nKey map file has not be loaded.\n");
+        fprintf(stdout,"\nKey map file has not been loaded.\n");
         return INPUT_ERROR;
     }  
 
     if(KEY_MAP_TABLE.max_index < button_code){
-        fprintf(stdout,"\nKey map file has not be loaded.\n");
+        fprintf(stdout,"\nSpecified button code is not supported: %d\n", button_code);
         return INPUT_ERROR;
     }  
 
@@ -399,7 +399,7 @@ int updateKeyMap(char* key_map_path,int button_code,unsigned long keysym_code){
 
     for(int indx = 0; indx < KEY_MAP_TABLE.max_index; indx++){
         
-        if(indx == button_code + HEADER_LINE_OFFSET){
+        if(indx == button_code){
             current_button_code = button_code;
             current_keysym_code = keysym_code;
 

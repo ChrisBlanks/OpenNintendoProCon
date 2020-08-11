@@ -13,9 +13,6 @@ Date: Summer 2020
 
 
 //configuration values
-#define CLI_ARGS_EXPECTED 2
-#define JOYSTICK_DEV 1
-
 #define NUM_OF_AXES 6
 #define MAX_AXIS_VALUE 32767
 

@@ -6,59 +6,27 @@ Date: Summer 2020
 
 */
 
-#include <unistd.h>
-#include <fcntl.h>
 #include <stdio.h>
-
+#include <stdlib.h>
 
 // source code headers
+#include "config.h"
+#include "cmd_utils.h"
 #include "pro_con_errors.h"
-#include "pro_con_utils.h"
-#include "x11_map.h"
 
 
 int main(int argc, char* argv[]){
-    char* js_dev_name = NULL;
-    int js_fd = 0;
 
-    if(argc != CLI_ARGS_EXPECTED){
-        fprintf(stderr,"\nError(%d): %s Only provided %d argument(s).\n",
-                INPUT_ERROR,
-                getErrorMessage(INPUT_ERROR),
-                argc
-               );
+    cli_args_t* args = NULL;
 
-        return INPUT_ERROR;
-    }
+    args = (cli_args_t*) malloc(sizeof(cli_args_t));
+    args->all_args = (arg_t*) malloc(DEFAULT_CLI_ARGS_SZ* sizeof(arg_t));
 
-    js_dev_name = argv[JOYSTICK_DEV];
-    js_fd = open(js_dev_name,O_RDONLY);
-
-    if(js_fd < 0){
-        fprintf(stderr,"\nError(%d): %s -> %s.\n",
-                BAD_FILE_PATH_ERROR,
-                getErrorMessage(BAD_FILE_PATH_ERROR),
-                js_dev_name
-               );
-
-        return BAD_FILE_PATH_ERROR;    
-    }
+    parseCLIArgs(argc,argv,args);
+    initRoutine();
+    executeCommand(args);
     
-    //initialize error info
-    loadErrorFile(ERROR_DEF_PATH);
-    displayErrorList();
-
-    //load key map
-    loadKeyMap(KEY_MAP_PATH);
-    displayLoadedKeyMap();
-
-    //updateKeyMap(NULL,5,103);
-
-    //run test code
-    processAllEvents(js_fd,js_dev_name);
-    //testControllerInputs(js_fd,js_dev_name);
-
-    close(js_fd);
+    freeArgsData(args);
 
     return SUCCESSFUL_EXECUTION; 
 }
