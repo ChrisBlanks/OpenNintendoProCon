@@ -19,6 +19,8 @@ so that a Linux desktop user is able to use a pro controller in a manner similar
   - See Joystick API @ the following links: 
     - [Kernel Text File Documentation](https://www.kernel.org/doc/Documentation/input/joystick-api.txt)
     - [Sphinx Style Documentation](https://www.kernel.org/doc/html/latest/input/joydev/joystick.html)
+- libXtst-1.2.3-9
+- libXtst-devel-1.2.3-9
 
 
 ### Notes

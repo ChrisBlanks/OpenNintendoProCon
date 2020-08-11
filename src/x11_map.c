@@ -11,16 +11,55 @@ Date: Summer 2020
 #include <string.h>
 #include <unistd.h>
 
+#include <X11/extensions/XTest.h>
+
 #define __X11_MAP_MAIN__
 //source code headers
 #include "x11_map.h"
 #include "pro_con_errors.h"
 
 
+int clickMouseAtCurrentPos(x11_display_objs_t* x11_interface,int isPressed){
+    XEvent click_event = {0};
+
+    //set event values
+    click_event.type = ButtonPress;
+    click_event.xbutton.button = Button1;
+    click_event.xbutton.same_screen = True;
+    
+    click_event.xbutton.subwindow = DefaultRootWindow(x11_interface->disp);;
+
+    //iterate through windows until no more subwindows
+    while(click_event.xbutton.subwindow){
+        click_event.xbutton.window = click_event.xbutton.subwindow;
+        XQueryPointer(x11_interface->disp,click_event.xbutton.window ,&(click_event.xbutton.root), &(click_event.xbutton.subwindow),
+                      &(click_event.xbutton.x_root), &(click_event.xbutton.y_root),
+		              &(click_event.xbutton.x), &(click_event.xbutton.y),&(click_event.xbutton.state)
+                      );
+
+    }
+
+    if(isPressed){
+        XSendEvent(x11_interface->disp,PointerWindow,True,ButtonPressMask,&click_event);
+        XFlush(x11_interface->disp);
+    }else{
+        click_event.type = ButtonRelease;
+        XSendEvent(x11_interface->disp,PointerWindow,True,ButtonReleaseMask,&click_event);
+        XFlush(x11_interface->disp);        
+    }
+
+    usleep(CLICK_SLEEP_uS);
+
+    return SUCCESSFUL_EXECUTION;
+}
+
+
 int convertControllerEventToKeyEvent(x11_display_objs_t* x11_interface,controller_input_t* con_event,XKeyEvent* key_event){
     int event_mods   = NO_MODS,
         button_state = 0,
         keysym_code  = 0;
+
+    unsigned int no_delay = 0;
 
     if(KEY_MAP_TABLE.isInitialized != KEY_MAP_TABLE_INITIALIZED){
         fprintf(stdout,"\nKey map file has not be loaded.\n");
@@ -30,7 +69,41 @@ int convertControllerEventToKeyEvent(x11_display_objs_t* x11_interface,controlle
     button_state = con_event->button_event->isPressed;
     keysym_code =  KEY_MAP_TABLE.key_map_table[con_event->button_event->button_code].keysym;
 
-    sendKeyEventToX(x11_interface,key_event,keysym_code,button_state,event_mods);
+    if(keysym_code == XK_Pointer_Button1){ //left click
+        XTestFakeButtonEvent(x11_interface->disp, 1, button_state, no_delay);
+    } else if (keysym_code == XK_Pointer_Button3){ //right click
+        XTestFakeButtonEvent(x11_interface->disp, 3, button_state, no_delay);
+    } else{
+        XTestFakeKeyEvent(x11_interface->disp, XKeysymToKeycode(x11_interface->disp,keysym_code),button_state,no_delay);
+    }
+
+    return SUCCESSFUL_EXECUTION;
+}
+
+
+int convertControllerEventToMouseMove(x11_display_objs_t* x11_interface,direction_input_t* direction_input){
+    int x_destination = 0,
+        y_destination = 0;
+
+    int direction = direction_input->changed_axis,
+        pos_val       = 0,
+        isHoriz       = 0,
+        move_scalar = 0;
+
+    isHoriz = (direction % 2 == 0) ? 1 : 0;
+    pos_val = direction_input->joysticks_pos[direction];
+    move_scalar = (direction_input->changed_axis >= DIR_PAD_HORIZ ) ? KEYPAD_ADJUST_SCALAR : POINTER_MOVE_SCALAR;
+    
+    fprintf(stdout,"\nPos: %d, Scalar: %d",pos_val,move_scalar);   
+    
+    if(isHoriz){
+        XWarpPointer(x11_interface->disp,None,None,0,0,0,0,POINTER_MOVE_SCALAR*pos_val/MAX_AXIS_VALUE,0);
+        fprintf(stdout,"\nDelta X: %d\n",move_scalar*pos_val/MAX_AXIS_VALUE);
+    } else{
+        XWarpPointer(x11_interface->disp,None,None,0,0,0,0,0,POINTER_MOVE_SCALAR*pos_val/MAX_AXIS_VALUE);
+        fprintf(stdout,"\nDelta Y: %d\n",move_scalar*pos_val/MAX_AXIS_VALUE);       
+    }
+
     XFlush(x11_interface->disp);
 
     return SUCCESSFUL_EXECUTION;
@@ -45,11 +118,11 @@ int displayLoadedKeyMap(void){
 
     fprintf(stdout,"\nKey Map List:\n\n");
     for(int indx = 0; indx < KEY_MAP_TABLE.max_index; indx++){
-        fprintf(stdout,"Key Map #%d: %s: %d %d \n",
+        fprintf(stdout,"Key Map #%d: %s -> %s (%d)\n",
         indx,
         KEY_MAP_TABLE.key_map_table[indx].button_name,
-        KEY_MAP_TABLE.key_map_table[indx].controller_code,
-        KEY_MAP_TABLE.key_map_table[indx].keysym       
+        XKeysymToString(KEY_MAP_TABLE.key_map_table[indx].keysym),
+        KEY_MAP_TABLE.key_map_table[indx].keysym    
         );
     }  
     fprintf(stdout,"\nDone.\n");
@@ -162,7 +235,6 @@ int modifyXKeyEvent(x11_display_objs_t* x11_interface,int isPressed,int keysym,i
     event->subwindow = None;
 
     event->time = CurrentTime; 
-    
     event->x = 1;
     event->y = 1;
     event->x_root = 1;
@@ -180,6 +252,8 @@ int modifyXKeyEvent(x11_display_objs_t* x11_interface,int isPressed,int keysym,i
 int processAllEvents(int joystick_fd,char* joystick_file_name){
 
     int status = SUCCESSFUL_EXECUTION;
+    int x_pos = 0,
+        y_pos = 0;
 
     char* direction      = NULL,
         * direction_type = NULL;
@@ -216,13 +290,25 @@ int processAllEvents(int joystick_fd,char* joystick_file_name){
             
             case JOYSTICK_TYPE:
                 controller.event_type = JOYSTICK_TYPE;
+                initXInterface(&x11_interface); //updates window to what's currently focused on
                 getJoystickInfo(&cur_event,controller.js_keypad_event);
+
+                convertControllerEventToMouseMove(&x11_interface,controller.js_keypad_event);
+                freeXInterfaceObjs(&x11_interface);
                 
+                if(controller.js_keypad_event->changed_axis % 2 == 0){
+                    x_pos = controller.js_keypad_event->changed_axis;
+                    y_pos = controller.js_keypad_event->other_axis;
+                } else{
+                    x_pos = controller.js_keypad_event->other_axis;
+                    y_pos = controller.js_keypad_event->changed_axis;                    
+                }
+
                 fprintf(stdout,"\nJoystick Event: %s %s @ position (%d, %d)\n",
                         controller.js_keypad_event->direction,
                         controller.js_keypad_event->direction_type,
-                        controller.js_keypad_event->joysticks_pos[controller.js_keypad_event->changed_axis],
-                        controller.js_keypad_event->joysticks_pos[controller.js_keypad_event->other_axis]
+                        controller.js_keypad_event->joysticks_pos[x_pos],
+                        controller.js_keypad_event->joysticks_pos[y_pos]
                        ); //add CLI for file logging enable
                 break;
 
@@ -243,7 +329,8 @@ int sendKeyEventToX(x11_display_objs_t* display_objs,XKeyEvent* key_event,int ke
 
     modifyXKeyEvent(display_objs, isPressed,key_code,modifiers,key_event); 
     XSendEvent(key_event->display,key_event->window,PROPAGATE_EN,event_mask,(XEvent*)key_event);
-
+    XFlush(display_objs->disp);
+    
     return SUCCESSFUL_EXECUTION; 
 }
 
@@ -290,12 +377,12 @@ int updateKeyMap(char* key_map_path,int button_code,unsigned long keysym_code){
     FILE* key_map_file = NULL;
 
     if(KEY_MAP_TABLE.isInitialized != KEY_MAP_TABLE_INITIALIZED){
-        fprintf(stdout,"\nKey map file has not be loaded.\n");
+        fprintf(stdout,"\nKey map file has not been loaded.\n");
         return INPUT_ERROR;
     }  
 
     if(KEY_MAP_TABLE.max_index < button_code){
-        fprintf(stdout,"\nKey map file has not be loaded.\n");
+        fprintf(stdout,"\nSpecified button code is not supported: %d\n", button_code);
         return INPUT_ERROR;
     }  
 
@@ -312,7 +399,7 @@ int updateKeyMap(char* key_map_path,int button_code,unsigned long keysym_code){
 
     for(int indx = 0; indx < KEY_MAP_TABLE.max_index; indx++){
         
-        if(indx == button_code + HEADER_LINE_OFFSET){
+        if(indx == button_code){
             current_button_code = button_code;
             current_keysym_code = keysym_code;
 
