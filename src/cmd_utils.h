@@ -20,9 +20,13 @@ Date: Summer 2020
 
 #define DISPLAY_OPTION    "d"
 #define DISPLAY_ALL       "all"
-#define DISPLAY_ERRORS     "errors"
+#define DISPLAY_ERRORS    "errors"
+#define DISPLAY_MAP       "map"
+#define DISPLAY_CONFIG    "config"
 
-#define CONFIGURE_SETTINGS "c"
+#define CONFIGURE_MAP_SETTINGS "m"
+#define CONFIGURE_CONFIG_SETTINGS "c"
+#define SETTING_DELIMITER  ","
 
 // enum definitions 
 enum pro_con_settings_type {
@@ -55,7 +59,7 @@ int  connectToController(char* controller_path,int* js_fd);
 void displayAll(void);
 void displayPossibleErrors(void);
 void displaySettings(int settings_type);
-int executeCommand(cli_args_t* args);
+int  executeCommand(cli_args_t* args);
 void freeArgsData(cli_args_t* args);
 void initRoutine(void);
 void parseCLIArgs(int argc, char* argv[],cli_args_t* args);

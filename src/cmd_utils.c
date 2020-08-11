@@ -85,11 +85,16 @@ void displaySettings(int settings_type){
 
 
 int executeCommand(cli_args_t* args){
-    int result       = 0,
-        js_fd        = 0,
-        processLater = 0; //boolean to control whether to start processing joystick events
+    int result        = 0,
+        js_fd         = 0,
+        processLater  = 0,
+        settings_code = 0; //boolean to control whether to start processing joystick events
 
+    char local_buf[100] = {0};
     char* device_path = (args->all_args)->value;
+    
+    char* settings_name = NULL,
+        * settings_val  = NULL;
 
     result = connectToController(device_path,&js_fd); //pass 1st arg value to read from specified device
     if(result < SUCCESSFUL_EXECUTION){
@@ -100,7 +105,7 @@ int executeCommand(cli_args_t* args){
     //loop through all args, besides device path
     for(int arg_indx = 1; arg_indx < args->count;arg_indx++ ){
         if(arg_indx == 1){ printf("\nStarting command execution\n"); } 
-        
+
         if( strcmp( (args->all_args+arg_indx)->option,EMPTY_OPTION) == COMMAND_MATCH ){
             
             if( strcmp( (args->all_args+arg_indx)->value,START_PROCESSING) == COMMAND_MATCH ){
@@ -111,19 +116,32 @@ int executeCommand(cli_args_t* args){
             
         } else if ( strcmp( (args->all_args+arg_indx)->option,DISPLAY_OPTION) == COMMAND_MATCH){
             
-            if( strcmp( (args->all_args+arg_indx)->value,DISPLAY_ALL) == COMMAND_MATCH){
+            if( strcmp( (args->all_args+arg_indx)->value, DISPLAY_ALL) == COMMAND_MATCH){
                 displayAll();    
-            } else if ( strcmp( (args->all_args+arg_indx)->value,DISPLAY_ERRORS) == COMMAND_MATCH){
+            } else if ( strcmp( (args->all_args+arg_indx)->value, DISPLAY_ERRORS) == COMMAND_MATCH){
                 displayErrorList();
+            } else if ( strcmp( (args->all_args+arg_indx)->value, DISPLAY_MAP) == COMMAND_MATCH){ 
+                displaySettings(CONTROLLER_MAP_SETTINGS); 
+            } else if ( strcmp( (args->all_args+arg_indx)->value, DISPLAY_CONFIG) == COMMAND_MATCH){ 
+                displaySettings(CONFIGURATION_SETTINGS); 
             } else {
                 fprintf(stderr,"\nNot a supported command: \"-%s %s\"\n",
                         (args->all_args+arg_indx)->option,
                         (args->all_args+arg_indx)->value
                         );    
+            } 
+            
+        } else if ( strcmp( (args->all_args+arg_indx)->option,CONFIGURE_MAP_SETTINGS)  == COMMAND_MATCH){
+            strcpy(local_buf,(args->all_args+arg_indx)->value);
+            settings_name = strtok(local_buf,",");
+            settings_val = strtok(NULL,",");
+
+            if(settings_name != NULL && settings_val != NULL){
+                configureSettings(CONTROLLER_MAP_SETTINGS,settings_name,settings_val);
+            } else{
+                fprintf(stderr,"\nInput is not in the right format: \"%s\"\n",(args->all_args+arg_indx)->value);
             }
             
-        } else if ( strcmp( (args->all_args+arg_indx)->option,CONFIGURE_SETTINGS) ){
-            //To-Do: Implement a way to configure settings. *idea: -c settings_name,settings_value
         } else{
             fprintf(stderr,"\nNot a supported command: \"-%s %s\"\n",
                     (args->all_args+arg_indx)->option,
@@ -158,6 +176,9 @@ void parseCLIArgs(int argc, char* argv[],cli_args_t* args){
     char* current_arg = NULL,
         * next_arg    = NULL,
         * char_pos    = NULL;
+    
+    int arg_indx = 0,
+        arg_num  = 0;
 
     if(args == NULL){ //initialize if empty
         args = (cli_args_t*) malloc(sizeof(cli_args_t));
@@ -166,7 +187,7 @@ void parseCLIArgs(int argc, char* argv[],cli_args_t* args){
 
     args->count = argc-1; //ignore 1st CLI arg (file name)
 
-    for(int arg_indx=0,arg_num =1; arg_num <= args->count;arg_indx++,arg_num++){
+    for(arg_indx=0,arg_num =1; arg_num <= args->count;arg_indx++,arg_num++){
         current_arg = argv[arg_num];
         char_pos = strrchr(current_arg,'-'); 
 
@@ -191,6 +212,7 @@ void parseCLIArgs(int argc, char* argv[],cli_args_t* args){
     }
     fprintf(stdout,"\n");
     
+    args->count = arg_indx; //set to number of arg_t objects filled
     args->isInitialized = 1;
     return;
 }
