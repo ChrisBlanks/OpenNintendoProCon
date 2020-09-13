@@ -131,6 +131,28 @@ int displayLoadedKeyMap(void){
 }
 
 
+int displayLoadedScriptMap(void){
+
+    if(SCRIPT_MAP_TABLE.isInitialized != SCRIPT_MAP_TABLE_INITIALIZED){
+        fprintf(stdout,"\nScript map file has not be loaded.\n");
+        return INPUT_ERROR;
+    }  
+
+    fprintf(stdout,"\nScript Map List:\n\n");
+    for(int indx = 0; indx < SCRIPT_MAP_TABLE.max_index; indx++){
+        fprintf(stdout,"Script Map #%d: %s -> %s",
+        indx,
+        SCRIPT_MAP_TABLE.script_map_table[indx].button_name,
+        SCRIPT_MAP_TABLE.script_map_table[indx].script_cmd  
+        );
+    }  
+    fprintf(stdout,"\nDone.\n");
+    
+    return SUCCESSFUL_EXECUTION;
+
+}
+
+
 int freeXInterfaceObjs(x11_display_objs_t* x11_interface){
     XCloseDisplay(x11_interface->disp);
     x11_interface->disp = NULL;
@@ -186,7 +208,7 @@ int loadKeyMap(char* key_map_path){
         * foundSubStr = NULL,
         * line_parts  = NULL;
         
-    char line_buf[MAX_LINE_SIZE]   = {0}; 
+    char line_buf[KEY_MAP_MAX_LINE_SZ]   = {0}; 
 
     path = (key_map_path == NULL) ? KEY_MAP_PATH: key_map_path;    
     key_map_file = fopen(path,"r");
@@ -196,11 +218,11 @@ int loadKeyMap(char* key_map_path){
         exit(1); 
     }
     
-    KEY_MAP_TABLE.key_map_table = (controller_key_map_t*) malloc(KEY_MAP_TABLE_DEFAULT_SIZE*sizeof(controller_key_map_t));
+    KEY_MAP_TABLE.key_map_table = (controller_key_map_t*) malloc(KEY_MAP_TABLE_DEFAULT_SZ*sizeof(controller_key_map_t));
     
     fprintf(stdout,"\nLoading Key Map...\n");
-    while(fgets(line_buf,MAX_LINE_SIZE,key_map_file) != NULL){
-        char* button_str = (char*) malloc(MAX_LINE_SIZE*sizeof(char));
+    while(fgets(line_buf,KEY_MAP_MAX_LINE_SZ,key_map_file) != NULL){
+        char* button_str = (char*) malloc(KEY_MAP_MAX_LINE_SZ*sizeof(char));
         if(foundSubStr = strstr(line_buf,"Key Map") ){ continue; } //ignore header
 
         line_parts = strtok(line_buf,KEY_MAP_LABEL_DELIM);
@@ -223,6 +245,61 @@ int loadKeyMap(char* key_map_path){
     KEY_MAP_TABLE.isInitialized = KEY_MAP_TABLE_INITIALIZED;
 
     fclose(key_map_file); 
+
+    return SUCCESSFUL_EXECUTION;
+}
+
+
+int loadScriptMap(char* script_map_path){
+
+    int script_map_num = 0,
+        button_code = 0;
+
+    FILE* script_map_file = NULL;
+
+    char* path        = NULL,
+        * keysym_str  = NULL,
+        * foundSubStr = NULL,
+        * line_parts  = NULL;
+        
+    char line_buf[SCRIPT_MAP_MAX_LINE_SZ]         = {0},
+         local_script_cmd[SCRIPT_MAP_MAX_LINE_SZ] = {0}; 
+
+    path = (script_map_path == NULL) ? SCRIPT_MAP_PATH: script_map_path;    
+    script_map_file = fopen(path,"r");
+
+    if(script_map_file == NULL){ 
+        fprintf(stdout,"\nError: Could not load script map file \"%s\".\n",path);
+        exit(1); 
+    }
+    
+    SCRIPT_MAP_TABLE.script_map_table = (controller_script_map_t*) malloc(SCRIPT_MAP_TABLE_DEFAULT_SZ*sizeof(controller_script_map_t));
+    
+    fprintf(stdout,"\nLoading Script Map...\n");
+    while(fgets(line_buf,SCRIPT_MAP_MAX_LINE_SZ,script_map_file) != NULL){
+        char* button_str = (char*) malloc(KEY_MAP_MAX_LINE_SZ*sizeof(char));
+        if(foundSubStr = strstr(line_buf,"Script Map") ){ continue; } //ignore header
+
+        line_parts = strtok(line_buf,SCRIPT_MAP_LABEL_DELIM);
+        strcpy(button_str,line_parts);
+
+        line_parts = strtok(NULL,SCRIPT_MAP_VALUE_DELIM);
+        button_code = strtol(line_parts,NULL,10);
+
+        line_parts = strtok(NULL,SCRIPT_MAP_VALUE_DELIM);
+        strcpy(local_script_cmd,line_parts);
+
+        SCRIPT_MAP_TABLE.script_map_table[script_map_num].controller_code = button_code ;
+        strcpy(SCRIPT_MAP_TABLE.script_map_table[script_map_num].script_cmd, local_script_cmd);
+        SCRIPT_MAP_TABLE.script_map_table[script_map_num].button_name = button_str ;
+
+        script_map_num++;
+    }
+
+    fclose(script_map_file);
+
+    SCRIPT_MAP_TABLE.isInitialized = SCRIPT_MAP_TABLE_INITIALIZED;
+    SCRIPT_MAP_TABLE.max_index = script_map_num;
 
     return SUCCESSFUL_EXECUTION;
 }
@@ -372,7 +449,7 @@ int updateKeyMap(char* key_map_path,int button_code,unsigned long keysym_code){
     unsigned long current_keysym_code = 0;
 
     char* path = NULL;    
-    char updated_line[MAX_LINE_SIZE]   = {0};
+    char updated_line[KEY_MAP_MAX_LINE_SZ]   = {0};
     
     FILE* key_map_file = NULL;
 
@@ -421,11 +498,75 @@ int updateKeyMap(char* key_map_path,int button_code,unsigned long keysym_code){
 
     //clear out data structure before reloading
     free(KEY_MAP_TABLE.key_map_table);
-    KEY_MAP_TABLE.isInitialized = 0;
+    KEY_MAP_TABLE.isInitialized = !KEY_MAP_TABLE_INITIALIZED;
     KEY_MAP_TABLE.max_index = 0;
 
     //reload key map file
-    loadKeyMap(key_map_path);
+    loadKeyMap(path);
+
+    return SUCCESSFUL_EXECUTION;
+}
+
+
+int updateScriptMap(char* script_map_path, int button_code, char* script_cmd){
+    int current_button_code = 0;
+
+    FILE* script_map_file = NULL;
+
+    char* path = (script_map_path == NULL) ? SCRIPT_MAP_PATH: script_map_path;
+    char updated_line[SCRIPT_MAP_MAX_LINE_SZ]   = {0};
+
+    char* current_script_cmd = NULL;    
+
+
+    if(SCRIPT_MAP_TABLE.isInitialized != SCRIPT_MAP_TABLE_INITIALIZED){
+        fprintf(stdout,"\nScript map file has not been loaded.\n");
+        return INPUT_ERROR;
+    }  
+
+    if(SCRIPT_MAP_TABLE.max_index < button_code){
+        fprintf(stdout,"\nSpecified button code is not supported: %d\n", button_code);
+        return INPUT_ERROR;
+    }  
+   
+    script_map_file = fopen(path,"w");
+    if(script_map_file == NULL){ 
+        fprintf(stdout,"\nError: Could not load script map file \"%s\".\n",path);
+        return INPUT_ERROR; 
+    }
+
+    //write header
+    fputs(KEY_MAP_HEADER,script_map_file);
+
+    for(int indx = 0; indx < SCRIPT_MAP_TABLE.max_index; indx++){
+        
+        if(indx == button_code){
+            current_button_code = button_code;
+            current_script_cmd = script_cmd;
+
+        } else{
+            current_button_code = SCRIPT_MAP_TABLE.script_map_table[indx].controller_code ;
+            current_script_cmd = SCRIPT_MAP_TABLE.script_map_table[indx].script_cmd;
+        }
+
+        sprintf(updated_line,"%s: %d, %s\n",
+                SCRIPT_MAP_TABLE.script_map_table[indx].button_name,
+                current_button_code,
+                current_script_cmd
+        );
+        fputs(updated_line,script_map_file);
+
+    }      
+
+    fclose(script_map_file);
+
+    //clear out data structure before reloading
+    free(SCRIPT_MAP_TABLE.script_map_table);
+    SCRIPT_MAP_TABLE.isInitialized = !SCRIPT_MAP_TABLE_INITIALIZED;
+    SCRIPT_MAP_TABLE.max_index = 0;
+
+    //reload key map file
+    loadScriptMap(path);
 
     return SUCCESSFUL_EXECUTION;
 }
