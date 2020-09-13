@@ -25,13 +25,15 @@ Date: Summer 2020
 #define DISPLAY_CONFIG    "config"
 
 #define CONFIGURE_MAP_SETTINGS "m"
+#define CONFIGURE_SCRIPT_SETTINGS "s"
 #define CONFIGURE_CONFIG_SETTINGS "c"
 #define SETTING_DELIMITER  ","
 
 // enum definitions 
 enum pro_con_settings_type {
     CONFIGURATION_SETTINGS,
-    CONTROLLER_MAP_SETTINGS
+    CONTROLLER_MAP_SETTINGS,
+    SCRIPT_SETTINGS
 };
 
 enum testing_modes {

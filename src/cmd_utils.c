@@ -21,8 +21,8 @@ Date: Summer 2020
 
 
 void configureSettings(int settings_type, char* settings_name, char* settings_value){
-    int setting = 0;
-    int value = 0;
+    int setting = 0,
+        value   = 0;
 
     switch(settings_type){
         case CONFIGURATION_SETTINGS:
@@ -36,10 +36,17 @@ void configureSettings(int settings_type, char* settings_name, char* settings_va
 
             updateKeyMap(NULL, setting, (unsigned long) value);
             break;
+
+        case SCRIPT_SETTINGS:
+            setting =  strtol(settings_name,NULL,10); // settings name should represent the button code 
+            updateScriptMap(NULL, setting, settings_value);
+            break;
+            
         default:
             fprintf(stderr,"\nNot a valid settings type (%d)\n",settings_type);
     }
 }
+
 
 int connectToController(char* controller_path,int* js_fd){
 
@@ -65,6 +72,7 @@ void displayPossibleErrors(void){
 void displayAll(void){
     displayErrorList();
     displayLoadedKeyMap();
+    displayLoadedScriptMap();
 }
 
 void displaySettings(int settings_type){
@@ -169,6 +177,7 @@ void freeArgsData(cli_args_t* args){
 void initRoutine(void){
     loadErrorFile(NULL);
     loadKeyMap(NULL);
+    loadScriptMap(NULL);
 }
 
 
