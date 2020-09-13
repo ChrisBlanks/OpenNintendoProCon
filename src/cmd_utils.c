@@ -41,7 +41,7 @@ void configureSettings(int settings_type, char* settings_name, char* settings_va
             setting =  strtol(settings_name,NULL,10); // settings name should represent the button code 
             updateScriptMap(NULL, setting, settings_value);
             break;
-            
+
         default:
             fprintf(stderr,"\nNot a valid settings type (%d)\n",settings_type);
     }
@@ -149,7 +149,17 @@ int executeCommand(cli_args_t* args){
             } else{
                 fprintf(stderr,"\nInput is not in the right format: \"%s\"\n",(args->all_args+arg_indx)->value);
             }
-            
+        } else if( strcmp( (args->all_args+arg_indx)->option, CONFIGURE_SCRIPT_SETTINGS) == COMMAND_MATCH){
+            strcpy(local_buf,(args->all_args+arg_indx)->value);
+            settings_name = strtok(local_buf,",");
+            settings_val = strtok(NULL,",");
+
+            if(settings_name != NULL && settings_val != NULL){
+                configureSettings(SCRIPT_SETTINGS,settings_name,settings_val);
+            } else{
+                fprintf(stderr,"\nInput is not in the right format: \"%s\"\n",(args->all_args+arg_indx)->value);
+            }
+
         } else{
             fprintf(stderr,"\nNot a supported command: \"-%s %s\"\n",
                     (args->all_args+arg_indx)->option,

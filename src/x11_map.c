@@ -514,10 +514,21 @@ int updateScriptMap(char* script_map_path, int button_code, char* script_cmd){
     FILE* script_map_file = NULL;
 
     char* path = (script_map_path == NULL) ? SCRIPT_MAP_PATH: script_map_path;
-    char updated_line[SCRIPT_MAP_MAX_LINE_SZ]   = {0};
+    char updated_line[SCRIPT_MAP_MAX_LINE_SZ]   = {0},
+         local_buf[SCRIPT_MAP_MAX_LINE_SZ]      = {0};
 
-    char* current_script_cmd = NULL;    
+    char* current_script_cmd = NULL;
 
+    if(script_cmd == NULL){
+        fprintf(stdout,"\nScript command not provided for button #%d.\n",button_code);
+        return INPUT_ERROR;        
+    }
+
+    if(strchr(script_cmd,'\n') == NULL ){
+        snprintf(local_buf,SCRIPT_MAP_MAX_LINE_SZ,"%s\n",script_cmd);
+    } else{
+        strcpy(local_buf,script_cmd);
+    }
 
     if(SCRIPT_MAP_TABLE.isInitialized != SCRIPT_MAP_TABLE_INITIALIZED){
         fprintf(stdout,"\nScript map file has not been loaded.\n");
@@ -536,20 +547,20 @@ int updateScriptMap(char* script_map_path, int button_code, char* script_cmd){
     }
 
     //write header
-    fputs(KEY_MAP_HEADER,script_map_file);
+    fputs(SCRIPT_MAP_HEADER,script_map_file);
 
     for(int indx = 0; indx < SCRIPT_MAP_TABLE.max_index; indx++){
         
         if(indx == button_code){
             current_button_code = button_code;
-            current_script_cmd = script_cmd;
+            current_script_cmd = local_buf;
 
         } else{
             current_button_code = SCRIPT_MAP_TABLE.script_map_table[indx].controller_code ;
             current_script_cmd = SCRIPT_MAP_TABLE.script_map_table[indx].script_cmd;
         }
 
-        sprintf(updated_line,"%s: %d, %s\n",
+        sprintf(updated_line,"%s: %d,%s",
                 SCRIPT_MAP_TABLE.script_map_table[indx].button_name,
                 current_button_code,
                 current_script_cmd

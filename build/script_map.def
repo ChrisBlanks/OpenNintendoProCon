@@ -1,8 +1,8 @@
 --- Script Map Definitions ---
-B: 0, empty
-A: 1, empty
+B: 0,firefox
+A: 1,onboard
 Y: 2, empty
-X: 3, empty
+X: 3,java
 L: 4, empty
 R: 5, empty
 ZL: 6, empty
@@ -10,6 +10,6 @@ ZR: 7, empty
 Minus: 8, empty
 Plus: 9, empty
 Left JS Press: 10, empty
-Right JS Press: 11, empty
+Right JS Press: 11,code
 Home: 12, empty
-Screenshot: 13, empty
+Screenshot: 13,code
