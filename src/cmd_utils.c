@@ -86,6 +86,10 @@ void displaySettings(int settings_type){
         case CONTROLLER_MAP_SETTINGS:
             displayLoadedKeyMap();
             break;
+
+        case SCRIPT_SETTINGS:
+            displayLoadedScriptMap();
+            break;
         default:
             fprintf(stderr,"\nNot a valid settings type (%d)\n",settings_type);
     }
@@ -141,6 +145,8 @@ int executeCommand(cli_args_t* args){
                 displaySettings(CONTROLLER_MAP_SETTINGS); 
             } else if ( strcmp( (args->all_args+arg_indx)->value, DISPLAY_CONFIG) == COMMAND_MATCH){ 
                 displaySettings(CONFIGURATION_SETTINGS); 
+            } else if ( strcmp( (args->all_args+arg_indx)->value, DISPLAY_SCRIPTS) == COMMAND_MATCH){ 
+                displaySettings(SCRIPT_SETTINGS); 
             } else {
                 fprintf(stderr,"\nNot a supported command: \"-%s %s\"\n",
                         (args->all_args+arg_indx)->option,
@@ -164,7 +170,8 @@ int executeCommand(cli_args_t* args){
             settings_val = strtok(NULL,",");
 
             if(settings_name != NULL && settings_val != NULL){
-                configureSettings(SCRIPT_SETTINGS,settings_name,settings_val);
+                configureSettings(CONTROLLER_MAP_SETTINGS, settings_name, RUN_SCRIPT_CONSTANT_STR); 
+                configureSettings(SCRIPT_SETTINGS, settings_name, settings_val);
             } else{
                 fprintf(stderr,"\nInput is not in the right format: \"%s\"\n",(args->all_args+arg_indx)->value);
             }
