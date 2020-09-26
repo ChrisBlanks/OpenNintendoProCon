@@ -258,7 +258,3 @@ void startProConProcessing(int joystick_fd,char* joystick_file_name){
 
     processAllEvents(joystick_fd,joystick_file_name);
 }
-
-void startTestMode(int mode){
-
-}

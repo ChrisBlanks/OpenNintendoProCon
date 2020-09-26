@@ -63,12 +63,12 @@ int  connectToController(char* controller_path,int* js_fd);
 void displayAll(void);
 void displayPossibleErrors(void);
 void displaySettings(int settings_type);
+void displaySoftwareVersion(void);
 int  executeCommand(cli_args_t* args);
 void freeArgsData(cli_args_t* args);
 void initRoutine(void);
 void parseCLIArgs(int argc, char* argv[],cli_args_t* args);
 void startProConProcessing(int joystick_fd,char* joystick_file_name);
-void startTestMode(int mode);
 
 
 
