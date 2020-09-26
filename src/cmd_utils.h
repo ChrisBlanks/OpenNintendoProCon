@@ -23,6 +23,7 @@ Date: Summer 2020
 #define DISPLAY_ERRORS    "errors"
 #define DISPLAY_MAP       "map"
 #define DISPLAY_CONFIG    "config"
+#define DISPLAY_SW_VERS   "v"
 
 #define CONFIGURE_MAP_SETTINGS "m"
 #define CONFIGURE_SCRIPT_SETTINGS "s"

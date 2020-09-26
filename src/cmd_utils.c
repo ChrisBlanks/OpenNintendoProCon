@@ -14,6 +14,7 @@ Date: Summer 2020
 #include <string.h>
 
 //source code headers
+#include "config.h"
 #include "cmd_utils.h"
 #include "pro_con_utils.h"
 #include "pro_con_errors.h"
@@ -91,6 +92,14 @@ void displaySettings(int settings_type){
 
 }
 
+void displaySoftwareVersion(void){
+    fprintf(stdout,"Software Version: %d.%d.%d\n", SOFTWARE_MAJOR_VERSION
+                                                 , SOFTWARE_MINOR_VERSION
+                                                 , SOFTWARE_PATCH_VERSION
+            );
+
+}
+
 
 int executeCommand(cli_args_t* args){
     int result        = 0,
@@ -159,7 +168,8 @@ int executeCommand(cli_args_t* args){
             } else{
                 fprintf(stderr,"\nInput is not in the right format: \"%s\"\n",(args->all_args+arg_indx)->value);
             }
-
+        } else if( strcmp( (args->all_args+arg_indx)->option, DISPLAY_SW_VERS) == COMMAND_MATCH){
+            displaySoftwareVersion();
         } else{
             fprintf(stderr,"\nNot a supported command: \"-%s %s\"\n",
                     (args->all_args+arg_indx)->option,
