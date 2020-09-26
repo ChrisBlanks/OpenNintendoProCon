@@ -45,6 +45,7 @@ Date: Summer 2020
 #define SCRIPT_HEADER_LINE_OFFSET      KEY_MAP_HEADER_LINE_OFFSET
 #define SCRIPT_MAP_TABLE_INITIALIZED   KEY_MAP_TABLE_INITIALIZED
 
+#define RUN_SCRIPT_CONSTANT -1  //indicates whether to run script instead of sending key event
 
 //data structure definitions
 typedef struct controller_key_map_t {

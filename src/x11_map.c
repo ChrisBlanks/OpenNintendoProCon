@@ -59,11 +59,19 @@ int convertControllerEventToKeyEvent(x11_display_objs_t* x11_interface,controlle
         button_state = 0,
         keysym_code  = 0;
 
+    int status = 0;
+
     unsigned int no_delay = 0;
+
 
     if(KEY_MAP_TABLE.isInitialized != KEY_MAP_TABLE_INITIALIZED){
         fprintf(stdout,"\nKey map file has not be loaded.\n");
         return INPUT_ERROR;
+    }  
+
+    if(SCRIPT_MAP_TABLE.isInitialized != SCRIPT_MAP_TABLE_INITIALIZED){
+        fprintf(stdout,"\nScript map file has not be loaded.\n");
+        return INPUT_ERROR; //should change to setup error
     }  
 
     button_state = con_event->button_event->isPressed;
@@ -73,6 +81,15 @@ int convertControllerEventToKeyEvent(x11_display_objs_t* x11_interface,controlle
         XTestFakeButtonEvent(x11_interface->disp, 1, button_state, no_delay);
     } else if (keysym_code == XK_Pointer_Button3){ //right click
         XTestFakeButtonEvent(x11_interface->disp, 3, button_state, no_delay);
+    } else if (keysym_code == RUN_SCRIPT_CONSTANT){
+        //run cli script
+        status = system(NULL);
+        if(status){
+            system(SCRIPT_MAP_TABLE.script_map_table[con_event->button_event->button_code].script_cmd);
+        } else{
+            fprintf(stdout, "\nNo shell available.\n");
+        }
+
     } else{
         XTestFakeKeyEvent(x11_interface->disp, XKeysymToKeycode(x11_interface->disp,keysym_code),button_state,no_delay);
     }
