@@ -46,6 +46,7 @@ Date: Summer 2020
 #define SCRIPT_MAP_TABLE_INITIALIZED   KEY_MAP_TABLE_INITIALIZED
 
 #define RUN_SCRIPT_CONSTANT -1  //indicates whether to run script instead of sending key event
+#define RUN_SCRIPT_CONSTANT_STR "-1"
 
 //data structure definitions
 typedef struct controller_key_map_t {
