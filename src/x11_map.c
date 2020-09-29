@@ -92,7 +92,16 @@ int convertControllerEventToKeyEvent(x11_display_objs_t* x11_interface,controlle
             pthread_create(&thread_id,NULL,runScriptThread,script_cmd);
         }
     } else{
+        if(button_state && keysym_code >= XK_A && keysym_code  <= XK_Z){
+            XTestFakeKeyEvent(x11_interface->disp,XKeysymToKeycode(x11_interface->disp,XK_Shift_L),button_state, no_delay);
+        }
+        
         XTestFakeKeyEvent(x11_interface->disp, XKeysymToKeycode(x11_interface->disp,keysym_code),button_state,no_delay);
+        
+        if(!button_state && keysym_code >= XK_A && keysym_code <= XK_Z){
+            XTestFakeKeyEvent(x11_interface->disp,XKeysymToKeycode(x11_interface->disp,XK_Shift_L),button_state, no_delay);
+        }
+    
     }
 
     return SUCCESSFUL_EXECUTION;
