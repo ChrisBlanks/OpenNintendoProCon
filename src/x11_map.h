@@ -105,12 +105,14 @@ int convertControllerEventToKeyEvent(x11_display_objs_t* x11_interface, controll
 int convertControllerEventToMouseMove(x11_display_objs_t* x11_interface,direction_input_t* direction_input);
 int displayLoadedKeyMap(void);
 int displayLoadedScriptMap(void);
+int executeScriptInThread(char* script_cmd);
 int freeXInterfaceObjs(x11_display_objs_t* x11_interface);
 int modifyXKeyEvent(x11_display_objs_t* x11_interface,int isPressed,int keysym,int modifiers,XKeyEvent* event);
 int initXInterface(x11_display_objs_t* x11_interface);
 int loadKeyMap(char* key_map_path);
 int loadScriptMap(char* script_map_path);
 int processAllEvents(int joystick_fd,char* joystick_file_name);
+void* runScriptThread(void* arg);
 int sendKeyEventToX(x11_display_objs_t* display_objs,XKeyEvent* key_event,int key_code, int isPressed,int modifiers);
 int testAtoZPresses(void);
 int testSendingKeyPresses(int key_code);

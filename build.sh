@@ -4,4 +4,4 @@
 # Date: Summer 2020
 #
 
-gcc -o build/openprocon src/*.c -L/usr/X11R6/lib -lX11 -lXtst
+gcc -o build/openprocon src/*.c -L/usr/X11R6/lib -lX11 -lXtst -lpthread

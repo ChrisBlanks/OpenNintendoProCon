@@ -9,7 +9,9 @@ Date: Summer 2020
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include <unistd.h>
+#include <pthread.h> //requires including pthread library when compiling
 
 #include <X11/extensions/XTest.h>
 
@@ -57,11 +59,14 @@ int clickMouseAtCurrentPos(x11_display_objs_t* x11_interface,int isPressed){
 int convertControllerEventToKeyEvent(x11_display_objs_t* x11_interface,controller_input_t* con_event,XKeyEvent* key_event){
     int event_mods   = NO_MODS,
         button_state = 0,
-        keysym_code  = 0;
-
-    int status = 0;
+        keysym_code  = 0,
+        status       = 0;
 
     unsigned int no_delay = 0;
+
+    char* script_cmd = NULL;
+    
+    pthread_t thread_id;
 
 
     if(KEY_MAP_TABLE.isInitialized != KEY_MAP_TABLE_INITIALIZED){
@@ -82,14 +87,10 @@ int convertControllerEventToKeyEvent(x11_display_objs_t* x11_interface,controlle
     } else if (keysym_code == XK_Pointer_Button3){ //right click
         XTestFakeButtonEvent(x11_interface->disp, 3, button_state, no_delay);
     } else if (keysym_code == RUN_SCRIPT_CONSTANT){
-        //run cli script
-        status = system(NULL);
-        if(status){
-            system(SCRIPT_MAP_TABLE.script_map_table[con_event->button_event->button_code].script_cmd);
-        } else{
-            fprintf(stdout, "\nNo shell available.\n");
+        if(con_event->button_event->isPressed){
+            script_cmd = SCRIPT_MAP_TABLE.script_map_table[con_event->button_event->button_code].script_cmd;
+            pthread_create(&thread_id,NULL,runScriptThread,script_cmd);
         }
-
     } else{
         XTestFakeKeyEvent(x11_interface->disp, XKeysymToKeycode(x11_interface->disp,keysym_code),button_state,no_delay);
     }
@@ -164,6 +165,31 @@ int displayLoadedScriptMap(void){
         );
     }  
     fprintf(stdout,"\nDone.\n");
+    
+    return SUCCESSFUL_EXECUTION;
+
+}
+
+
+int executeScriptInThread(char* script_cmd){
+    int status = 0;
+
+    if(script_cmd == NULL){
+        fprintf(stderr,"Error: Script command is null.\n");
+        return INPUT_ERROR;
+    }
+
+    status = system(NULL); //check if shell is available
+    if(!status){
+        fprintf(stdout, "\nNo shell available.\n");
+        return EXECUTION_ERROR;
+    }
+
+    status = system(script_cmd);
+    if(status < 0){
+        fprintf(stdout, "\nCould not execute command.\n");
+        return EXECUTION_ERROR;    
+    }
     
     return SUCCESSFUL_EXECUTION;
 
@@ -415,6 +441,16 @@ int processAllEvents(int joystick_fd,char* joystick_file_name){
     }
 
     return SUCCESSFUL_EXECUTION;
+}
+
+
+void* runScriptThread(void* arg){
+    int status = 0;
+    char* cmd = (char*)arg;
+
+    status = executeScriptInThread(cmd);
+    
+    return SUCCESSFUL_EXECUTION; 
 }
 
 
