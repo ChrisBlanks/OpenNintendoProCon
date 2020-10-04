@@ -68,7 +68,6 @@ int convertControllerEventToKeyEvent(x11_display_objs_t* x11_interface,controlle
     
     pthread_t thread_id;
 
-
     if(KEY_MAP_TABLE.isInitialized != KEY_MAP_TABLE_INITIALIZED){
         fprintf(stdout,"\nKey map file has not be loaded.\n");
         return INPUT_ERROR;
@@ -124,10 +123,10 @@ int convertControllerEventToMouseMove(x11_display_objs_t* x11_interface,directio
     fprintf(stdout,"\nPos: %d, Scalar: %d",pos_val,move_scalar);   
     
     if(isHoriz){
-        XWarpPointer(x11_interface->disp,None,None,0,0,0,0,POINTER_MOVE_SCALAR*pos_val/MAX_AXIS_VALUE,0);
+        XWarpPointer(x11_interface->disp,None,None,0,0,0,0,move_scalar*pos_val/MAX_AXIS_VALUE,0);
         fprintf(stdout,"\nDelta X: %d\n",move_scalar*pos_val/MAX_AXIS_VALUE);
     } else{
-        XWarpPointer(x11_interface->disp,None,None,0,0,0,0,0,POINTER_MOVE_SCALAR*pos_val/MAX_AXIS_VALUE);
+        XWarpPointer(x11_interface->disp,None,None,0,0,0,0,0,move_scalar*pos_val/MAX_AXIS_VALUE);
         fprintf(stdout,"\nDelta Y: %d\n",move_scalar*pos_val/MAX_AXIS_VALUE);       
     }
 
@@ -388,9 +387,11 @@ int processAllEvents(int joystick_fd,char* joystick_file_name){
         * direction_type = NULL;
 
     struct js_event cur_event = {0};
-    
+    pthread_t thread_id = 0;
+
     //controller data structure initialization
     controller_input_t controller = {0};
+
     controller.button_event = (button_input_t*) malloc(sizeof(button_input_t));
     controller.js_keypad_event = (direction_input_t*) malloc(sizeof(direction_input_t));
 
@@ -404,11 +405,14 @@ int processAllEvents(int joystick_fd,char* joystick_file_name){
     //process & print events
     while( status == SUCCESSFUL_EXECUTION ){ 
         status = readControllerEvent(joystick_fd,&cur_event); 
-        if(status == DEVICE_READ_ERROR){ continue; }
+        if(status == DEVICE_READ_ERROR){ continue; } 
+
+        jsPosIsHeld = 0;
 
         switch(cur_event.type){
             case KEY_BUTTON_TYPE:
                 controller.event_type = KEY_BUTTON_TYPE;
+
                 initXInterface(&x11_interface); //updates window to what's currently focused on
 
                 getButtonInfo(&cur_event,controller.button_event);
@@ -419,6 +423,7 @@ int processAllEvents(int joystick_fd,char* joystick_file_name){
             
             case JOYSTICK_TYPE:
                 controller.event_type = JOYSTICK_TYPE;
+
                 initXInterface(&x11_interface); //updates window to what's currently focused on
                 getJoystickInfo(&cur_event,controller.js_keypad_event);
 
@@ -439,6 +444,11 @@ int processAllEvents(int joystick_fd,char* joystick_file_name){
                         controller.js_keypad_event->joysticks_pos[x_pos],
                         controller.js_keypad_event->joysticks_pos[y_pos]
                        ); //add CLI for file logging enable
+                
+
+                jsPosIsHeld = 1;
+                pthread_create(&thread_id,NULL,updateMousePos,&controller);
+                
                 break;
 
             default:
@@ -567,6 +577,27 @@ int updateKeyMap(char* key_map_path,int button_code,unsigned long keysym_code){
     loadKeyMap(path);
 
     return SUCCESSFUL_EXECUTION;
+}
+
+
+void* updateMousePos(void* arg){
+    controller_input_t* prev_con = (controller_input_t*)arg;
+    x11_display_objs_t x11_interface;
+
+    int changed_axis_pos_val = prev_con->js_keypad_event->joysticks_pos[ prev_con->js_keypad_event->changed_axis];
+    int new_changed_pos_val = changed_axis_pos_val / 2;
+
+    prev_con->js_keypad_event->joysticks_pos[ prev_con->js_keypad_event->changed_axis] = new_changed_pos_val;
+
+    while(jsPosIsHeld && abs(new_changed_pos_val) > (int)(MAX_AXIS_VALUE / 100) ){
+        fprintf(stdout,"--- joystick position hold update ---\n");
+        initXInterface(&x11_interface);
+        convertControllerEventToMouseMove(&x11_interface, prev_con->js_keypad_event);
+        freeXInterfaceObjs(&x11_interface);
+        usleep(HOLD_UPDATE_DELAY_uS);
+
+    } 
+
 }
 
 

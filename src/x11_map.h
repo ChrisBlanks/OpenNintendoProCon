@@ -21,11 +21,12 @@ Date: Summer 2020
 #define POINTER_MOVE_SCALAR   25
 #define KEYPAD_ADJUST_SCALAR  5
 #define CLICK_SLEEP_uS        20000   //20 milliseconds
-#define JOYSTICK_UPDATE_DELAY 20000   //20 milliseconds
+#define HOLD_UPDATE_DELAY_uS  50000   //50 milliseconds
+#define KEY_TEST_DELAY  1             // seconds
+
 
 #define NO_MODS         0
 #define PROPAGATE_EN    1
-#define KEY_TEST_DELAY  1 // seconds
 
 #define KEY_MAP_PATH                   "key_map.def"
 #define KEY_MAP_TABLE_DEFAULT_SZ       20
@@ -92,10 +93,13 @@ typedef struct x11_display_objs_t{
 #ifdef __X11_MAP_MAIN__
 key_map_table_t KEY_MAP_TABLE = {0};
 script_map_table_t SCRIPT_MAP_TABLE = {0};
+int jsPosIsHeld = 0; 
 
 #else
 extern key_map_table_t KEY_MAP_TABLE;
 extern script_map_table_t SCRIPT_MAP_TABLE; 
+
+int jsPosIsHeld;
 
 #endif //__X11_MAP_MAIN__
 
@@ -118,5 +122,6 @@ int testAtoZPresses(void);
 int testSendingKeyPresses(int key_code);
 int updateKeyMap(char* key_map_path,int button_code,unsigned long keysym_code);
 int updateScriptMap(char* script_map_path, int button_code, char* script_cmd);
+void* updateMousePos(void* arg);
 
 #endif // ifndef __KEY_MAP__
