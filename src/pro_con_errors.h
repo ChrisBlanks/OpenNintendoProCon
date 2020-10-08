@@ -21,6 +21,7 @@ Date: Summer 2020
 #define JOYSTICK_AXES_ERROR                -4
 #define DEVICE_READ_ERROR                  -5
 #define COULD_NOT_OPEN_DISPLAY_ERROR       -6
+#define COULD_NOT_OPEN_JS_FILE             -7
 
 #define ERROR_TABLE_INITIALIZED 1
  
