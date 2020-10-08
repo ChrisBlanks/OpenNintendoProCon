@@ -21,10 +21,12 @@ RESOURCE_PARENT_DIR="build"
 RESOURCE_PATH_GLOB=$RESOURCE_PARENT_DIR/*$RESOURCE_FILE_EXTENSION
 RESOURCE_INSTALL_FOLDER=$HOME/$LOCAL_SHARE/$APP_NAME
 
-echo $EXEC_ORIG_PATH
-echo $RESOURCE_PATH_GLOB
-echo $EXEC_INSTALL_DIR
-echo $RESOURCE_INSTALL_FOLDER
+#echo $EXEC_ORIG_PATH
+#echo $RESOURCE_PATH_GLOB
+#echo $EXEC_INSTALL_DIR
+#echo $RESOURCE_INSTALL_FOLDER
+
+echo "Installing openprocon..."
 
 if test -e $RESOURCE_INSTALL_FOLDER; then
     echo "Resource installation directory already exists."
@@ -35,3 +37,5 @@ fi
 #install files in the proper directories
 cp $EXEC_ORIG_PATH $EXEC_INSTALL_DIR
 cp $RESOURCE_PATH_GLOB $RESOURCE_INSTALL_FOLDER
+
+echo "Installation complete."
