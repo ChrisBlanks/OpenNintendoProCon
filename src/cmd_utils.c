@@ -12,6 +12,10 @@ Date: Summer 2020
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <dirent.h>
+#include <errno.h>
+#include <pwd.h>
+#include <sys/types.h>
 
 //source code headers
 #include "config.h"
@@ -54,13 +58,17 @@ int connectToController(char* controller_path,int* js_fd){
     *js_fd = open(controller_path,O_RDONLY);
 
     if(*js_fd < 0){
-        fprintf(stderr,"\nError(%d): %s -> %s.\n",
-                BAD_FILE_PATH_ERROR,
-                getErrorMessage(BAD_FILE_PATH_ERROR),
-                controller_path
-               );
+        if ((*js_fd = open(TEST_JOYSTICK_PATH,O_RDONLY)) < 0 ){
+            fprintf(stderr,"\nError(%d): %s -> %s.\n",
+                    COULD_NOT_OPEN_JS_FILE,
+                    getErrorMessage(COULD_NOT_OPEN_JS_FILE),
+                    controller_path
+                    );
 
-        return BAD_FILE_PATH_ERROR;    
+            return BAD_FILE_PATH_ERROR;
+        } else{
+            fprintf(stdout,"\nInfo: Joystick could not be found. Using test joystick @ %s\n",TEST_JOYSTICK_PATH);    
+        }   
     }
 
     return SUCCESSFUL_EXECUTION;
@@ -123,9 +131,9 @@ int executeCommand(cli_args_t* args){
         return result;
     }
    
-    //loop through all args, besides device path
-    for(int arg_indx = 1; arg_indx < args->count;arg_indx++ ){
-        if(arg_indx == 1){ printf("\nStarting command execution\n"); } 
+    //loop through all args
+    for(int arg_indx = 0; arg_indx < args->count;arg_indx++ ){
+        if(arg_indx == 0){ printf("\nStarting command execution\n"); } 
 
         if( strcmp( (args->all_args+arg_indx)->option,EMPTY_OPTION) == COMMAND_MATCH ){
             
@@ -177,6 +185,8 @@ int executeCommand(cli_args_t* args){
             }
         } else if( strcmp( (args->all_args+arg_indx)->option, DISPLAY_SW_VERS) == COMMAND_MATCH){
             displaySoftwareVersion();
+        } else if( strcmp( (args->all_args+arg_indx)->option,SET_RESOURCE_DIR_OPTION) == COMMAND_MATCH ){
+            //handled elsewhere
         } else{
             fprintf(stderr,"\nNot a supported command: \"-%s %s\"\n",
                     (args->all_args+arg_indx)->option,
@@ -201,10 +211,77 @@ void freeArgsData(cli_args_t* args){
     return;
 }
 
-void initRoutine(void){
-    loadErrorFile(NULL);
-    loadKeyMap(NULL);
-    loadScriptMap(NULL);
+
+void getResourcePaths(cli_args_t* args, char** error_file_path, char** key_map_path, char** script_map_path){
+    int isValidPath = 0;
+    
+    char* resource_path = NULL,
+        * input_path    = NULL,
+        * home_path     = NULL;
+
+    char path_buf[100] = {0};
+
+    DIR* resource_dir = NULL;
+
+    *error_file_path = (char*) malloc(MAX_PATH_SIZE_SZ * sizeof(char));
+    *key_map_path = (char*) malloc(MAX_PATH_SIZE_SZ * sizeof(char));
+    *script_map_path = (char*) malloc(MAX_PATH_SIZE_SZ * sizeof(char));
+
+    //loop through all args
+    for(int arg_indx = 0; arg_indx < args->count;arg_indx++ ){
+
+        if( strcmp( (args->all_args+arg_indx)->option,SET_RESOURCE_DIR_OPTION) == COMMAND_MATCH ){
+            
+            input_path = (args->all_args+arg_indx)->value;
+            resource_dir = opendir(input_path);
+
+            if(resource_dir){
+                closedir(resource_dir);
+                isValidPath = 1;
+            } else if(errno == ENOENT){
+                fprintf(stderr,"\nError: Resource directory does not exist.\n");
+            } else{
+                fprintf(stderr,"\nError: Could not open directory\n");
+            }
+
+        }
+
+    }
+
+    if(isValidPath){
+        resource_path = input_path;
+    } else{
+       if((home_path = getenv("HOME")) == NULL){
+           home_path = getpwuid(getuid())->pw_dir;
+       }  
+        sprintf(path_buf,"%s/%s", home_path, DEFAULT_RESOURCE_DIR);
+        resource_path = path_buf;
+    }
+
+    sprintf(*error_file_path,"%s/%s", resource_path, ERROR_DEF_PATH);
+    sprintf(*key_map_path,"%s/%s", resource_path, KEY_MAP_PATH);
+    sprintf(*script_map_path,"%s/%s", resource_path, SCRIPT_MAP_PATH);
+
+    fprintf(stdout,"\nInfo: Error definitions path: %s", *error_file_path);
+    fprintf(stdout,"\nInfo: Key map path: %s", *key_map_path);
+    fprintf(stdout,"\nInfo: Script map path: %s\n", *script_map_path);
+
+    return;
+}
+
+void initRoutine(cli_args_t* args){
+
+    char* error_file_path = NULL,
+        * key_map_path = NULL,
+        * script_map_path = NULL;
+    
+    getResourcePaths(args, &error_file_path, &key_map_path, &script_map_path);
+
+    loadErrorFile(error_file_path);
+    loadKeyMap(key_map_path);
+    loadScriptMap(script_map_path);
+
+    fprintf(stdout, "\nInfo: Initializing done.");
 }
 
 
