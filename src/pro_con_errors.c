@@ -68,7 +68,7 @@ void  loadErrorFile(char* error_file_path){
     free(error_message);
     fclose(err_file);  
 
-    fprintf(stdout,"\nLoaded %d errors.\n",cur_index);
+    fprintf(stdout,"\nLoaded %d error definitions.",cur_index);
 
     GLOBAL_ERRORS.max_index = cur_index;
     GLOBAL_ERRORS.isInitialized = ERROR_TABLE_INITIALIZED;  
