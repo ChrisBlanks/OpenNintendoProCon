@@ -126,7 +126,7 @@ int readControllerEvent(int joystick_fd, struct js_event* event_info){
     int status = 0;
     ssize_t num_bytes;
 
-    num_bytes = read(joystick_fd,event_info,sizeof(*event_info));
+    num_bytes = read(joystick_fd,event_info,sizeof(*event_info)); //blocks until bytes to read, EOL, or error
     status = (num_bytes == sizeof(*event_info)) ? SUCCESSFUL_EXECUTION : DEVICE_READ_ERROR;
 
     return status;

@@ -23,7 +23,7 @@ int main(int argc, char* argv[]){
     args->all_args = (arg_t*) malloc(DEFAULT_CLI_ARGS_SZ* sizeof(arg_t));
 
     parseCLIArgs(argc,argv,args);
-    initRoutine();
+    initRoutine(args);
     executeCommand(args);
     
     freeArgsData(args);

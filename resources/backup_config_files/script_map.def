@@ -1,0 +1,15 @@
+--- Script Map Definitions ---
+B: 0,null
+A: 1,null
+Y: 2,null
+X: 3,null
+L: 4,null
+R: 5, null
+ZL: 6, null
+ZR: 7, null
+Minus: 8, null
+Plus: 9,firefox
+Left JS Press: 10, null
+Right JS Press: 11,code
+Home: 12,onboard
+Screenshot: 13,code

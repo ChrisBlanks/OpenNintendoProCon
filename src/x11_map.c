@@ -9,7 +9,9 @@ Date: Summer 2020
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include <unistd.h>
+#include <pthread.h> //requires including pthread library when compiling
 
 #include <X11/extensions/XTest.h>
 
@@ -57,13 +59,23 @@ int clickMouseAtCurrentPos(x11_display_objs_t* x11_interface,int isPressed){
 int convertControllerEventToKeyEvent(x11_display_objs_t* x11_interface,controller_input_t* con_event,XKeyEvent* key_event){
     int event_mods   = NO_MODS,
         button_state = 0,
-        keysym_code  = 0;
+        keysym_code  = 0,
+        status       = 0;
 
     unsigned int no_delay = 0;
+
+    char* script_cmd = NULL;
+    
+    pthread_t thread_id;
 
     if(KEY_MAP_TABLE.isInitialized != KEY_MAP_TABLE_INITIALIZED){
         fprintf(stdout,"\nKey map file has not be loaded.\n");
         return INPUT_ERROR;
+    }  
+
+    if(SCRIPT_MAP_TABLE.isInitialized != SCRIPT_MAP_TABLE_INITIALIZED){
+        fprintf(stdout,"\nScript map file has not be loaded.\n");
+        return INPUT_ERROR; //should change to setup error
     }  
 
     button_state = con_event->button_event->isPressed;
@@ -73,8 +85,22 @@ int convertControllerEventToKeyEvent(x11_display_objs_t* x11_interface,controlle
         XTestFakeButtonEvent(x11_interface->disp, 1, button_state, no_delay);
     } else if (keysym_code == XK_Pointer_Button3){ //right click
         XTestFakeButtonEvent(x11_interface->disp, 3, button_state, no_delay);
+    } else if (keysym_code == RUN_SCRIPT_CONSTANT){
+        if(con_event->button_event->isPressed){
+            script_cmd = SCRIPT_MAP_TABLE.script_map_table[con_event->button_event->button_code].script_cmd;
+            pthread_create(&thread_id,NULL,runScriptThread,script_cmd);
+        }
     } else{
+        if(button_state && keysym_code >= XK_A && keysym_code  <= XK_Z){
+            XTestFakeKeyEvent(x11_interface->disp,XKeysymToKeycode(x11_interface->disp,XK_Shift_L),button_state, no_delay);
+        }
+        
         XTestFakeKeyEvent(x11_interface->disp, XKeysymToKeycode(x11_interface->disp,keysym_code),button_state,no_delay);
+        
+        if(!button_state && keysym_code >= XK_A && keysym_code <= XK_Z){
+            XTestFakeKeyEvent(x11_interface->disp,XKeysymToKeycode(x11_interface->disp,XK_Shift_L),button_state, no_delay);
+        }
+    
     }
 
     return SUCCESSFUL_EXECUTION;
@@ -97,10 +123,10 @@ int convertControllerEventToMouseMove(x11_display_objs_t* x11_interface,directio
     fprintf(stdout,"\nPos: %d, Scalar: %d",pos_val,move_scalar);   
     
     if(isHoriz){
-        XWarpPointer(x11_interface->disp,None,None,0,0,0,0,POINTER_MOVE_SCALAR*pos_val/MAX_AXIS_VALUE,0);
+        XWarpPointer(x11_interface->disp,None,None,0,0,0,0,move_scalar*pos_val/MAX_AXIS_VALUE,0);
         fprintf(stdout,"\nDelta X: %d\n",move_scalar*pos_val/MAX_AXIS_VALUE);
     } else{
-        XWarpPointer(x11_interface->disp,None,None,0,0,0,0,0,POINTER_MOVE_SCALAR*pos_val/MAX_AXIS_VALUE);
+        XWarpPointer(x11_interface->disp,None,None,0,0,0,0,0,move_scalar*pos_val/MAX_AXIS_VALUE);
         fprintf(stdout,"\nDelta Y: %d\n",move_scalar*pos_val/MAX_AXIS_VALUE);       
     }
 
@@ -128,6 +154,53 @@ int displayLoadedKeyMap(void){
     fprintf(stdout,"\nDone.\n");
     
     return SUCCESSFUL_EXECUTION;
+}
+
+
+int displayLoadedScriptMap(void){
+
+    if(SCRIPT_MAP_TABLE.isInitialized != SCRIPT_MAP_TABLE_INITIALIZED){
+        fprintf(stdout,"\nScript map file has not be loaded.\n");
+        return INPUT_ERROR;
+    }  
+
+    fprintf(stdout,"\nScript Map List:\n\n");
+    for(int indx = 0; indx < SCRIPT_MAP_TABLE.max_index; indx++){
+        fprintf(stdout,"Script Map #%d: %s -> %s",
+        indx,
+        SCRIPT_MAP_TABLE.script_map_table[indx].button_name,
+        SCRIPT_MAP_TABLE.script_map_table[indx].script_cmd  
+        );
+    }  
+    fprintf(stdout,"\nDone.\n");
+    
+    return SUCCESSFUL_EXECUTION;
+
+}
+
+
+int executeScriptInThread(char* script_cmd){
+    int status = 0;
+
+    if(script_cmd == NULL){
+        fprintf(stderr,"Error: Script command is null.\n");
+        return INPUT_ERROR;
+    }
+
+    status = system(NULL); //check if shell is available
+    if(!status){
+        fprintf(stdout, "\nNo shell available.\n");
+        return EXECUTION_ERROR;
+    }
+
+    status = system(script_cmd);
+    if(status < 0){
+        fprintf(stdout, "\nCould not execute command.\n");
+        return EXECUTION_ERROR;    
+    }
+    
+    return SUCCESSFUL_EXECUTION;
+
 }
 
 
@@ -186,7 +259,7 @@ int loadKeyMap(char* key_map_path){
         * foundSubStr = NULL,
         * line_parts  = NULL;
         
-    char line_buf[MAX_LINE_SIZE]   = {0}; 
+    char line_buf[KEY_MAP_MAX_LINE_SZ]   = {0}; 
 
     path = (key_map_path == NULL) ? KEY_MAP_PATH: key_map_path;    
     key_map_file = fopen(path,"r");
@@ -196,11 +269,11 @@ int loadKeyMap(char* key_map_path){
         exit(1); 
     }
     
-    KEY_MAP_TABLE.key_map_table = (controller_key_map_t*) malloc(KEY_MAP_TABLE_DEFAULT_SIZE*sizeof(controller_key_map_t));
+    KEY_MAP_TABLE.key_map_table = (controller_key_map_t*) malloc(KEY_MAP_TABLE_DEFAULT_SZ*sizeof(controller_key_map_t));
     
-    fprintf(stdout,"\nLoading Key Map...\n");
-    while(fgets(line_buf,MAX_LINE_SIZE,key_map_file) != NULL){
-        char* button_str = (char*) malloc(MAX_LINE_SIZE*sizeof(char));
+    fprintf(stdout,"\nLoading Key Map...");
+    while(fgets(line_buf,KEY_MAP_MAX_LINE_SZ,key_map_file) != NULL){
+        char* button_str = (char*) malloc(KEY_MAP_MAX_LINE_SZ*sizeof(char));
         if(foundSubStr = strstr(line_buf,"Key Map") ){ continue; } //ignore header
 
         line_parts = strtok(line_buf,KEY_MAP_LABEL_DELIM);
@@ -223,6 +296,61 @@ int loadKeyMap(char* key_map_path){
     KEY_MAP_TABLE.isInitialized = KEY_MAP_TABLE_INITIALIZED;
 
     fclose(key_map_file); 
+
+    return SUCCESSFUL_EXECUTION;
+}
+
+
+int loadScriptMap(char* script_map_path){
+
+    int script_map_num = 0,
+        button_code = 0;
+
+    FILE* script_map_file = NULL;
+
+    char* path        = NULL,
+        * keysym_str  = NULL,
+        * foundSubStr = NULL,
+        * line_parts  = NULL;
+        
+    char line_buf[SCRIPT_MAP_MAX_LINE_SZ]         = {0},
+         local_script_cmd[SCRIPT_MAP_MAX_LINE_SZ] = {0}; 
+
+    path = (script_map_path == NULL) ? SCRIPT_MAP_PATH: script_map_path;    
+    script_map_file = fopen(path,"r");
+
+    if(script_map_file == NULL){ 
+        fprintf(stdout,"\nError: Could not load script map file \"%s\".\n",path);
+        exit(1); 
+    }
+    
+    SCRIPT_MAP_TABLE.script_map_table = (controller_script_map_t*) malloc(SCRIPT_MAP_TABLE_DEFAULT_SZ*sizeof(controller_script_map_t));
+    
+    fprintf(stdout,"\nLoading Script Map...");
+    while(fgets(line_buf,SCRIPT_MAP_MAX_LINE_SZ,script_map_file) != NULL){
+        char* button_str = (char*) malloc(KEY_MAP_MAX_LINE_SZ*sizeof(char));
+        if(foundSubStr = strstr(line_buf,"Script Map") ){ continue; } //ignore header
+
+        line_parts = strtok(line_buf,SCRIPT_MAP_LABEL_DELIM);
+        strcpy(button_str,line_parts);
+
+        line_parts = strtok(NULL,SCRIPT_MAP_VALUE_DELIM);
+        button_code = strtol(line_parts,NULL,10);
+
+        line_parts = strtok(NULL,SCRIPT_MAP_VALUE_DELIM);
+        strcpy(local_script_cmd,line_parts);
+
+        SCRIPT_MAP_TABLE.script_map_table[script_map_num].controller_code = button_code ;
+        strcpy(SCRIPT_MAP_TABLE.script_map_table[script_map_num].script_cmd, local_script_cmd);
+        SCRIPT_MAP_TABLE.script_map_table[script_map_num].button_name = button_str ;
+
+        script_map_num++;
+    }
+
+    fclose(script_map_file);
+
+    SCRIPT_MAP_TABLE.isInitialized = SCRIPT_MAP_TABLE_INITIALIZED;
+    SCRIPT_MAP_TABLE.max_index = script_map_num;
 
     return SUCCESSFUL_EXECUTION;
 }
@@ -259,9 +387,11 @@ int processAllEvents(int joystick_fd,char* joystick_file_name){
         * direction_type = NULL;
 
     struct js_event cur_event = {0};
-    
+    pthread_t thread_id = 0;
+
     //controller data structure initialization
     controller_input_t controller = {0};
+
     controller.button_event = (button_input_t*) malloc(sizeof(button_input_t));
     controller.js_keypad_event = (direction_input_t*) malloc(sizeof(direction_input_t));
 
@@ -275,11 +405,14 @@ int processAllEvents(int joystick_fd,char* joystick_file_name){
     //process & print events
     while( status == SUCCESSFUL_EXECUTION ){ 
         status = readControllerEvent(joystick_fd,&cur_event); 
-        if(status == DEVICE_READ_ERROR){ continue; }
+        if(status == DEVICE_READ_ERROR){ continue; } 
+
+        jsPosIsHeld = 0;
 
         switch(cur_event.type){
             case KEY_BUTTON_TYPE:
                 controller.event_type = KEY_BUTTON_TYPE;
+
                 initXInterface(&x11_interface); //updates window to what's currently focused on
 
                 getButtonInfo(&cur_event,controller.button_event);
@@ -290,6 +423,7 @@ int processAllEvents(int joystick_fd,char* joystick_file_name){
             
             case JOYSTICK_TYPE:
                 controller.event_type = JOYSTICK_TYPE;
+
                 initXInterface(&x11_interface); //updates window to what's currently focused on
                 getJoystickInfo(&cur_event,controller.js_keypad_event);
 
@@ -310,6 +444,11 @@ int processAllEvents(int joystick_fd,char* joystick_file_name){
                         controller.js_keypad_event->joysticks_pos[x_pos],
                         controller.js_keypad_event->joysticks_pos[y_pos]
                        ); //add CLI for file logging enable
+                
+
+                jsPosIsHeld = 1;
+                pthread_create(&thread_id,NULL,updateMousePos,&controller);
+                
                 break;
 
             default:
@@ -321,6 +460,16 @@ int processAllEvents(int joystick_fd,char* joystick_file_name){
     }
 
     return SUCCESSFUL_EXECUTION;
+}
+
+
+void* runScriptThread(void* arg){
+    int status = 0;
+    char* cmd = (char*)arg;
+
+    status = executeScriptInThread(cmd);
+    
+    return SUCCESSFUL_EXECUTION; 
 }
 
 
@@ -372,7 +521,7 @@ int updateKeyMap(char* key_map_path,int button_code,unsigned long keysym_code){
     unsigned long current_keysym_code = 0;
 
     char* path = NULL;    
-    char updated_line[MAX_LINE_SIZE]   = {0};
+    char updated_line[KEY_MAP_MAX_LINE_SZ]   = {0};
     
     FILE* key_map_file = NULL;
 
@@ -421,11 +570,107 @@ int updateKeyMap(char* key_map_path,int button_code,unsigned long keysym_code){
 
     //clear out data structure before reloading
     free(KEY_MAP_TABLE.key_map_table);
-    KEY_MAP_TABLE.isInitialized = 0;
+    KEY_MAP_TABLE.isInitialized = !KEY_MAP_TABLE_INITIALIZED;
     KEY_MAP_TABLE.max_index = 0;
 
     //reload key map file
-    loadKeyMap(key_map_path);
+    loadKeyMap(path);
+
+    return SUCCESSFUL_EXECUTION;
+}
+
+
+void* updateMousePos(void* arg){
+    controller_input_t* prev_con = (controller_input_t*)arg;
+    x11_display_objs_t x11_interface;
+
+    int changed_axis_pos_val = prev_con->js_keypad_event->joysticks_pos[ prev_con->js_keypad_event->changed_axis];
+    int new_changed_pos_val = changed_axis_pos_val / 2;
+
+    prev_con->js_keypad_event->joysticks_pos[ prev_con->js_keypad_event->changed_axis] = new_changed_pos_val;
+
+    while(jsPosIsHeld && abs(new_changed_pos_val) > (int)(MAX_AXIS_VALUE / 100) ){
+        fprintf(stdout,"--- joystick position hold update ---\n");
+        initXInterface(&x11_interface);
+        convertControllerEventToMouseMove(&x11_interface, prev_con->js_keypad_event);
+        freeXInterfaceObjs(&x11_interface);
+        usleep(HOLD_UPDATE_DELAY_uS);
+
+    } 
+
+}
+
+
+int updateScriptMap(char* script_map_path, int button_code, char* script_cmd){
+    int current_button_code = 0;
+
+    FILE* script_map_file = NULL;
+
+    char* path = (script_map_path == NULL) ? SCRIPT_MAP_PATH: script_map_path;
+    char updated_line[SCRIPT_MAP_MAX_LINE_SZ]   = {0},
+         local_buf[SCRIPT_MAP_MAX_LINE_SZ]      = {0};
+
+    char* current_script_cmd = NULL;
+
+    if(script_cmd == NULL){
+        fprintf(stdout,"\nScript command not provided for button #%d.\n",button_code);
+        return INPUT_ERROR;        
+    }
+
+    if(strchr(script_cmd,'\n') == NULL ){
+        snprintf(local_buf,SCRIPT_MAP_MAX_LINE_SZ,"%s\n",script_cmd);
+    } else{
+        strcpy(local_buf,script_cmd);
+    }
+
+    if(SCRIPT_MAP_TABLE.isInitialized != SCRIPT_MAP_TABLE_INITIALIZED){
+        fprintf(stdout,"\nScript map file has not been loaded.\n");
+        return INPUT_ERROR;
+    }  
+
+    if(SCRIPT_MAP_TABLE.max_index < button_code){
+        fprintf(stdout,"\nSpecified button code is not supported: %d\n", button_code);
+        return INPUT_ERROR;
+    }  
+   
+    script_map_file = fopen(path,"w");
+    if(script_map_file == NULL){ 
+        fprintf(stdout,"\nError: Could not load script map file \"%s\".\n",path);
+        return INPUT_ERROR; 
+    }
+
+    //write header
+    fputs(SCRIPT_MAP_HEADER,script_map_file);
+
+    for(int indx = 0; indx < SCRIPT_MAP_TABLE.max_index; indx++){
+        
+        if(indx == button_code){
+            current_button_code = button_code;
+            current_script_cmd = local_buf;
+
+        } else{
+            current_button_code = SCRIPT_MAP_TABLE.script_map_table[indx].controller_code ;
+            current_script_cmd = SCRIPT_MAP_TABLE.script_map_table[indx].script_cmd;
+        }
+
+        sprintf(updated_line,"%s: %d,%s",
+                SCRIPT_MAP_TABLE.script_map_table[indx].button_name,
+                current_button_code,
+                current_script_cmd
+        );
+        fputs(updated_line,script_map_file);
+
+    }      
+
+    fclose(script_map_file);
+
+    //clear out data structure before reloading
+    free(SCRIPT_MAP_TABLE.script_map_table);
+    SCRIPT_MAP_TABLE.isInitialized = !SCRIPT_MAP_TABLE_INITIALIZED;
+    SCRIPT_MAP_TABLE.max_index = 0;
+
+    //reload key map file
+    loadScriptMap(path);
 
     return SUCCESSFUL_EXECUTION;
 }
