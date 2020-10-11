@@ -271,7 +271,7 @@ int loadKeyMap(char* key_map_path){
     
     KEY_MAP_TABLE.key_map_table = (controller_key_map_t*) malloc(KEY_MAP_TABLE_DEFAULT_SZ*sizeof(controller_key_map_t));
     
-    fprintf(stdout,"\nLoading Key Map...\n");
+    fprintf(stdout,"\nLoading Key Map...");
     while(fgets(line_buf,KEY_MAP_MAX_LINE_SZ,key_map_file) != NULL){
         char* button_str = (char*) malloc(KEY_MAP_MAX_LINE_SZ*sizeof(char));
         if(foundSubStr = strstr(line_buf,"Key Map") ){ continue; } //ignore header
@@ -326,7 +326,7 @@ int loadScriptMap(char* script_map_path){
     
     SCRIPT_MAP_TABLE.script_map_table = (controller_script_map_t*) malloc(SCRIPT_MAP_TABLE_DEFAULT_SZ*sizeof(controller_script_map_t));
     
-    fprintf(stdout,"\nLoading Script Map...\n");
+    fprintf(stdout,"\nLoading Script Map...");
     while(fgets(line_buf,SCRIPT_MAP_MAX_LINE_SZ,script_map_file) != NULL){
         char* button_str = (char*) malloc(KEY_MAP_MAX_LINE_SZ*sizeof(char));
         if(foundSubStr = strstr(line_buf,"Script Map") ){ continue; } //ignore header
