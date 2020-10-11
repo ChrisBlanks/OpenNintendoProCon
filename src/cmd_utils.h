@@ -18,35 +18,35 @@ Date: Summer 2020
 #define COMMAND_MATCH    0
 #define EMPTY_OPTION     "None"
 
-/// Command syntax: /exe/path start
+/// Command syntax: /exe/path /path/to/Joystick start
 #define START_PROCESSING "start"
 
 
+// Command syntax: /exe/path -HELP_OPTION 
+#define HELP_OPTION "h"
+
 /// Command syntax: /exe/path -SET_RESOURCE_DIR_OPTION /path/to/resource/files
 #define SET_RESOURCE_DIR_OPTION "r"
-
-/// Command syntax: /exe/path -DISPLAY_OPTION_VALUE DISPLAY_TYPE
 
 //DISPLAY_OPTION value
 #define DISPLAY_OPTION    "d"
 
 //DISPLAY_TYPEs
+/// Command syntax: /exe/path -DISPLAY_OPTION_VALUE DISPLAY_TYPE
+
 #define DISPLAY_ALL       "all"
 #define DISPLAY_ERRORS    "errors"
 #define DISPLAY_MAP       "map"
-#define DISPLAY_CONFIG    "config"
 #define DISPLAY_SCRIPTS   "scripts"
-#define DISPLAY_SW_VERS   "v"
+#define DISPLAY_SW_VERS   "version"
 
 /// Command syntax: /exe/path -CONFIGURE_OPTION SETTING_CODE,SETTING_VALUE
 #define CONFIGURE_MAP_SETTINGS "m"
 #define CONFIGURE_SCRIPT_SETTINGS "s"
-#define CONFIGURE_CONFIG_SETTINGS "c"
 #define SETTING_DELIMITER  ","
 
 // enum definitions 
 enum pro_con_settings_type {
-    CONFIGURATION_SETTINGS,
     CONTROLLER_MAP_SETTINGS,
     SCRIPT_SETTINGS
 };
@@ -72,7 +72,7 @@ typedef struct cli_args_t {
 //function prototypes
 
 void configureSettings(int settings_type, char* settings_name, char* settings_value);
-int  connectToController(char* controller_path,int* js_fd);
+int  connectToController(char* controller_path, int* js_fd, int* isTestJS);
 void displayAll(void);
 void displayPossibleErrors(void);
 void displaySettings(int settings_type);
@@ -82,6 +82,7 @@ void freeArgsData(cli_args_t* args);
 void getResourcePaths(cli_args_t* args ,char** error_file_path, char** key_map_path, char** script_map_path);
 void initRoutine(cli_args_t* args);
 void parseCLIArgs(int argc, char* argv[],cli_args_t* args);
+void showHelp(void);
 void startProConProcessing(int joystick_fd,char* joystick_file_name);
 
 

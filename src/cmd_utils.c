@@ -30,10 +30,6 @@ void configureSettings(int settings_type, char* settings_name, char* settings_va
         value   = 0;
 
     switch(settings_type){
-        case CONFIGURATION_SETTINGS:
-            fprintf(stdout,"\nNot implemented yet.\n");
-            break;
-
         case CONTROLLER_MAP_SETTINGS:
             
             setting = strtol(settings_name,NULL,10); // settings name should represent the button code 
@@ -53,7 +49,7 @@ void configureSettings(int settings_type, char* settings_name, char* settings_va
 }
 
 
-int connectToController(char* controller_path,int* js_fd){
+int connectToController(char* controller_path, int* js_fd, int* isTestJS){
 
     *js_fd = open(controller_path,O_RDONLY);
 
@@ -64,11 +60,16 @@ int connectToController(char* controller_path,int* js_fd){
                     getErrorMessage(COULD_NOT_OPEN_JS_FILE),
                     controller_path
                     );
-
+            
+            *isTestJS = -1;
             return BAD_FILE_PATH_ERROR;
         } else{
-            fprintf(stdout,"\nInfo: Joystick could not be found. Using test joystick @ %s\n",TEST_JOYSTICK_PATH);    
+            fprintf(stdout,"\nInfo: Joystick could not be found @ \"%s\". Using test joystick @ \"%s\"\n", controller_path,TEST_JOYSTICK_PATH);    
+            *isTestJS = 1;
+
         }   
+    } else{
+        *isTestJS = 0;
     }
 
     return SUCCESSFUL_EXECUTION;
@@ -79,6 +80,7 @@ void displayPossibleErrors(void){
 }
 
 void displayAll(void){
+    displaySoftwareVersion();
     displayErrorList();
     displayLoadedKeyMap();
     displayLoadedScriptMap();
@@ -87,9 +89,6 @@ void displayAll(void){
 void displaySettings(int settings_type){
 
     switch(settings_type){
-        case CONFIGURATION_SETTINGS:
-            fprintf(stdout,"\nNot implemented yet.\n");
-            break;
 
         case CONTROLLER_MAP_SETTINGS:
             displayLoadedKeyMap();
@@ -115,21 +114,16 @@ void displaySoftwareVersion(void){
 
 int executeCommand(cli_args_t* args){
     int result        = 0,
-        js_fd         = 0,
+        js_fd         = 0, 
+        isTestJS      = 0,
         processLater  = 0,
         settings_code = 0; //boolean to control whether to start processing joystick events
 
     char local_buf[100] = {0};
-    char* device_path = (args->all_args)->value;
+    char* device_path = "";
     
     char* settings_name = NULL,
         * settings_val  = NULL;
-
-    result = connectToController(device_path,&js_fd); //pass 1st arg value to read from specified device
-    if(result < SUCCESSFUL_EXECUTION){
-        fprintf(stderr,"\nError(%d): %s -> %s.\n", result, getErrorMessage(result), device_path);
-        return result;
-    }
    
     //loop through all args
     for(int arg_indx = 0; arg_indx < args->count;arg_indx++ ){
@@ -137,12 +131,14 @@ int executeCommand(cli_args_t* args){
 
         if( strcmp( (args->all_args+arg_indx)->option,EMPTY_OPTION) == COMMAND_MATCH ){
             
-            if( strcmp( (args->all_args+arg_indx)->value,START_PROCESSING) == COMMAND_MATCH ){
+            if( strcmp( (args->all_args+arg_indx)->value, START_PROCESSING) == COMMAND_MATCH ){
                 processLater = 1;
-            } else{ 
-                continue; //To-Do: Execute other non-option commands here
+            } else{ //any other non-option argument is the joystick device file path
+                device_path = (args->all_args+arg_indx)->value;
             }
-            
+        } else if(strcmp((args->all_args+arg_indx)->option, HELP_OPTION) == COMMAND_MATCH){
+            showHelp();
+            return SUCCESSFUL_EXECUTION;  //end execution of commands if help option is given                
         } else if ( strcmp( (args->all_args+arg_indx)->option,DISPLAY_OPTION) == COMMAND_MATCH){
             
             if( strcmp( (args->all_args+arg_indx)->value, DISPLAY_ALL) == COMMAND_MATCH){
@@ -151,10 +147,10 @@ int executeCommand(cli_args_t* args){
                 displayErrorList();
             } else if ( strcmp( (args->all_args+arg_indx)->value, DISPLAY_MAP) == COMMAND_MATCH){ 
                 displaySettings(CONTROLLER_MAP_SETTINGS); 
-            } else if ( strcmp( (args->all_args+arg_indx)->value, DISPLAY_CONFIG) == COMMAND_MATCH){ 
-                displaySettings(CONFIGURATION_SETTINGS); 
             } else if ( strcmp( (args->all_args+arg_indx)->value, DISPLAY_SCRIPTS) == COMMAND_MATCH){ 
                 displaySettings(SCRIPT_SETTINGS); 
+            } else if ( strcmp( (args->all_args+arg_indx)->value, DISPLAY_SW_VERS) == COMMAND_MATCH){ 
+                displaySoftwareVersion(); 
             } else {
                 fprintf(stderr,"\nNot a supported command: \"-%s %s\"\n",
                         (args->all_args+arg_indx)->option,
@@ -195,7 +191,19 @@ int executeCommand(cli_args_t* args){
         }
     }
 
-    if(processLater){ startProConProcessing(js_fd,device_path); }
+    if(processLater){ 
+        result = connectToController(device_path,&js_fd, &isTestJS); 
+        if(result < SUCCESSFUL_EXECUTION){
+            fprintf(stderr,"\nError(%d): %s -> %s.\n", result, getErrorMessage(result), device_path);
+            return result;
+        }
+
+        if(isTestJS != 1){ 
+            startProConProcessing(js_fd,device_path); 
+        } else{
+            fprintf(stdout,"\nInfo: Real joystick is not available.\nEnding command execution.\n");
+        }
+    }
     
     return SUCCESSFUL_EXECUTION;
 }
@@ -262,9 +270,9 @@ void getResourcePaths(cli_args_t* args, char** error_file_path, char** key_map_p
     sprintf(*key_map_path,"%s/%s", resource_path, KEY_MAP_PATH);
     sprintf(*script_map_path,"%s/%s", resource_path, SCRIPT_MAP_PATH);
 
-    fprintf(stdout,"\nInfo: Error definitions path: %s", *error_file_path);
-    fprintf(stdout,"\nInfo: Key map path: %s", *key_map_path);
-    fprintf(stdout,"\nInfo: Script map path: %s\n", *script_map_path);
+    fprintf(stdout,"\nInfo: Error definitions path = %s", *error_file_path);
+    fprintf(stdout,"\nInfo: Key map path = %s", *key_map_path);
+    fprintf(stdout,"\nInfo: Script map path = %s\n", *script_map_path);
 
     return;
 }
@@ -281,7 +289,7 @@ void initRoutine(cli_args_t* args){
     loadKeyMap(key_map_path);
     loadScriptMap(script_map_path);
 
-    fprintf(stdout, "\nInfo: Initializing done.");
+    fprintf(stdout, "\nInfo: Initializing done.\n");
 }
 
 
@@ -309,6 +317,11 @@ void parseCLIArgs(int argc, char* argv[],cli_args_t* args){
         if(char_pos != NULL && strlen(current_arg) >= 2){ //process single letter & multi-letter options
             snprintf((args->all_args+arg_indx)->option,DEFAULT_CLI_STR_SZ,"%s",char_pos+1);
             
+            if(strcmp((args->all_args+arg_indx)->option, HELP_OPTION) == COMMAND_MATCH){
+                snprintf((args->all_args+arg_indx)->value, DEFAULT_CLI_STR_SZ, "Display help");
+                continue; //help option doesn't take a value                
+            }
+
             if(arg_num + 1 <= args->count){
                 next_arg = argv[arg_num + 1];
                 snprintf((args->all_args+arg_indx)->value,DEFAULT_CLI_STR_SZ,"%s",next_arg);
@@ -327,6 +340,30 @@ void parseCLIArgs(int argc, char* argv[],cli_args_t* args){
     
     args->count = arg_indx; //set to number of arg_t objects filled
     args->isInitialized = 1;
+    return;
+}
+
+
+void showHelp(void){
+    fprintf(stdout,"\n\n------ App: %s ------\n",APP_NAME);
+    fprintf(stdout,"\nDescription: %s\n",APP_DESCRIPTION);
+    fprintf(stdout,"Synopsis: %s [-h] [joystick_file_path] [%s] [options] \n",APP_NAME,START_PROCESSING);
+    fprintf(stdout,"\nOptions:");
+
+    fprintf(stdout,"\n\'-h\'  Displays help information. Exits application.\n");
+    
+    fprintf(stdout,"\n\'joystick_file_path\'  Absolute path to joystick file to read events from.\n");
+    fprintf(stdout,"\n\'%s\'  Starts processing and mapping of procon events.\n",START_PROCESSING);
+    
+    fprintf(stdout,"\n\'-%s type\'  Displays information based on provided type.\n",DISPLAY_OPTION);
+    fprintf(stdout,"           Valid types: \'%s\', \'%s\', \'%s\', \'%s\', \'%s\'\n", DISPLAY_ALL, DISPLAY_ERRORS, DISPLAY_MAP, DISPLAY_SCRIPTS, DISPLAY_SW_VERS);
+
+    fprintf(stdout,"\n\'-%s event_code%ssetting_value\'  Configures mapping of joystick code to keymap value.\n",CONFIGURE_MAP_SETTINGS, SETTING_DELIMITER);
+    fprintf(stdout,"\n\'-%s event_code%s\"script\"\'  Configures mapping of joystick code to script to execute.\n",CONFIGURE_SCRIPT_SETTINGS, SETTING_DELIMITER);
+    
+    fprintf(stdout,"------------------------------\n");
+
+    fprintf(stdout,"\nEnding command execution.\n");
     return;
 }
 
